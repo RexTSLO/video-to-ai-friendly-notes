@@ -129,3 +129,8 @@ Thumbs.db
 # Git worktrees
 .worktrees/
 worktrees/
+
+# Project local inputs, outputs, and cached fonts
+inputs/
+outputs/
+fonts/

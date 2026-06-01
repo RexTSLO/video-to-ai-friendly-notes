@@ -17,8 +17,8 @@
 3.  **對 AI / RAG 極友善的 PDF 講義編排**：
     *   **繁體中文支援**：首次執行時會自動下載並註冊 `NotoSansCJKtc` 字型，徹底防止中文字元在 PDF 中變成空白方塊（Glyph Error），並具備優雅的 system font fallback 機制。
     *   **高結構化 layout**：每頁包含明確的 `Slide X (Timestamp)` 標記區塊、投影片縮圖，以及與時間軸精準對齊的字幕筆記文字（`[MM:SS] 文字`），利於各類多模態大模型（VLM）與 RAG 系統直接高精確度解析。
-4.  **強健的沙盒機制**：自動管理 `tempfile` 臨時資料夾。下載的影片與 OpenCV 擷取的暫存影格，在 Pipeline 處理完畢（或發生非預期錯誤）時，均保證在 `finally` 區塊中被**完美清理乾淨**。
-5.  **100% 離線 CI-safe 測試**：本專案採用嚴格的 TDD 設計，所有重型與網路依賴元件（`yt-dlp`、`faster-whisper`、`cv2`、`urllib`、`fpdf2`）皆有對應的 mock 測試，使 13 個單元與整合測試案例能在 2 秒內於無 GPU、無連網環境下秒過。
+4.  **強健的沙盒機制**：自動管理 `tempfile` 臨時資料夾。OpenCV 擷取的暫存影格在 Pipeline 結束時會被沙盒自動清理乾淨；而下載的影片則會預設安全且永久保留於 `inputs/` 目錄中，方便使用者留存或未來重複讀取。
+5.  **100% 離線 CI-safe 測試**：本專案採用嚴格的 TDD 設計，所有重型與網路依賴元件（`yt-dlp`、`faster-whisper`、`cv2`、`urllib`、`fpdf2`）皆有對應 of mock 測試，使 14 個單元與整合測試案例能在 2 秒內於無 GPU、無連網環境下秒過。
 
 ---
 

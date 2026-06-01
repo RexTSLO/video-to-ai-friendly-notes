@@ -113,3 +113,35 @@ def test_write_srt(tmp_path):
         "Welcome to Python class\n\n"
     )
     assert content == expected_content
+
+
+def test_parse_srt(tmp_path):
+    """Test parsing a valid standard SRT file into segments list of dicts."""
+    srt_content = (
+        "1\n"
+        "00:00:00,000 --> 00:00:02,500\n"
+        "Hello World\n\n"
+        "2\n"
+        "00:00:03,125 --> 00:00:05,002\n"
+        "Welcome to Python class\n\n"
+    )
+    srt_file = tmp_path / "test.srt"
+    srt_file.write_text(srt_content, encoding="utf-8")
+
+    segments = SubtitleTranscriber.parse_srt(str(srt_file))
+
+    assert len(segments) == 2
+    assert segments[0] == {"start": 0.0, "end": 2.5, "text": "Hello World"}
+    assert segments[1] == {"start": 3.125, "end": 5.002, "text": "Welcome to Python class"}
+
+
+def test_parse_srt_invalid(tmp_path):
+    """Test parsing an invalid or non-existent SRT file."""
+    # Test non-existent file
+    with pytest.raises(FileNotFoundError):
+        SubtitleTranscriber.parse_srt(str(tmp_path / "non_existent.srt"))
+
+    # Test empty file
+    empty_file = tmp_path / "empty.srt"
+    empty_file.write_text("", encoding="utf-8")
+    assert SubtitleTranscriber.parse_srt(str(empty_file)) == []

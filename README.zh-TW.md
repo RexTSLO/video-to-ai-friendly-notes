@@ -4,7 +4,7 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Tests Passed](https://img.shields.io/badge/tests-14%20passed-success.svg)](#單元與整合測試)
+[![Tests Passed](https://img.shields.io/badge/tests-20%20passed-success.svg)](#單元與整合測試)
 
 `video-to-ai-friendly-notes` 是一個模組化、輕量且高效的 Python 工具。它能夠一鍵下載 YouTube 課程影片（或讀取本地影片），自動偵測投影片切換畫面，整合語音轉文字（Speech-to-Text）生成精準字幕，最終編排輸出成**對 AI / LLM / RAG 極度友善的高結構化 PDF 講義筆記**（且完美支援繁體中文）。
 
@@ -18,7 +18,7 @@
     *   **繁體中文支援**：首次執行時會自動下載並註冊 `NotoSansCJKtc` 字型，徹底防止中文字元在 PDF 中變成空白方塊（Glyph Error），並具備優雅的 system font fallback 機制。
     *   **高結構化 layout**：每頁包含明確的 `Slide X (Timestamp)` 標記區塊、投影片縮圖，以及與時間軸精準對齊的字幕筆記文字（`[MM:SS] 文字`），利於各類多模態大模型（VLM）與 RAG 系統直接高精確度解析。
 4.  **強健的沙盒機制**：自動管理 `tempfile` 臨時資料夾。影片下載過程將先置於臨時沙盒中，待安全且完整下載合併完畢後才轉移至 `inputs/` 目錄，防止損壞的不全檔案殘留於工作區。
-5.  **100% 離線 CI-safe 測試**：本專案採用嚴格的 TDD 設計，所有重型與網路依賴元件（`yt-dlp`、`faster-whisper`、`cv2`、`urllib`、`fpdf2`）皆有對應 of mock 測試，使 14 個單元與整合測試案例能在 2 秒內於無 GPU、無連網環境下秒過。
+5.  **100% 離線 CI-safe 測試**：本專案採用嚴格的 TDD 設計，所有重型與網路依賴元件（`yt-dlp`、`faster-whisper`、`cv2`、`urllib`、`fpdf2`）皆有對應 of mock 測試，使 20 個單元與整合測試案例能在 2 秒內於無 GPU、無連網環境下秒過。
 6.  **智慧型產出目錄分流 (Smart Directory Dispatcher)**：為維持工作區簡潔與美感，產出的檔案不再散置於根目錄。所有產出預設安全儲存於 `outputs/` 目錄中並根據類型智慧分流：PDF 講義存放於 `outputs/pdf/`，SRT 字幕存放於 `outputs/subtitles/`，而 OpenCV 的投影片 JPEG 影格則永久歸納於專屬的 `outputs/slides/{產出名稱}/` 資料夾中。
 
 ---
@@ -95,6 +95,10 @@ python3 -m src.main -i "path/to/lecture.mp4" -o output_notes.pdf -t 15.0
 | `-l` | `--lang` | `zh` | 語音轉譯的語系代碼（預設 `zh` 會自動帶入繁體中文優化 prompt） |
 | `-t` | `--threshold`| `15.0` | 投影片切換偵測的 MAE 敏感度閾值（越低越敏感） |
 | `-d` | `--device` | `cpu` | 計算推理硬體載體（`cpu` 或 `cuda`） |
+| *無* | `--subs-from-yt` | *None* | 直接從 YouTube 下載指定的字幕語言（例如 `zh-TW`）並跳過本地 Whisper 轉譯。若該影片無此字幕則會報錯並終止。 |
+| *無* | `--max-res` | `720` | 限制下載 YouTube 影片的最大高度解析度（例如 `480`, `720`, `1080`），有效縮短下載時間及提升 OpenCV 影格處理效率。 |
+| *無* | `--time-range` | *None* | 指定要下載與處理的影片時間區段，格式為 `HH:MM:SS-HH:MM:SS`（例如 `00:10:00-00:20:30`）。 |
+
 
 ---
 

@@ -30,6 +30,9 @@ def main() -> None:
     parser.add_argument("-l", "--lang", default="zh", help="Language code (e.g. zh, en).")
     parser.add_argument("-t", "--threshold", type=float, default=15.0, help="Slide change detection MAE threshold (lower = more sensitive).")
     parser.add_argument("-d", "--device", default="cpu", help="Computation device to use ('cpu' or 'cuda').")
+    parser.add_argument("--subs-from-yt", default=None, help="Download specified subtitle language from YouTube directly (e.g., zh-TW), skipping Whisper.")
+    parser.add_argument("--max-res", type=int, default=720, help="Maximum video resolution height to download (e.g., 480, 720, 1080).")
+    parser.add_argument("--time-range", default=None, help="Download a specific section of the video in HH:MM:SS-HH:MM:SS format.")
 
     args = parser.parse_args()
 
@@ -49,6 +52,7 @@ def main() -> None:
 
     # Setup sandbox temporary working workspace for secure downloading
     temp_dir = tempfile.mkdtemp(prefix="vid2notes_")
+    temp_srt_path = None
 
     try:
         # Defensively ensure all isolated output directories exist before writing
@@ -62,8 +66,13 @@ def main() -> None:
         # 1. Download video if URL is provided (using temp_dir as sandbox to avoid corrupt partial files)
         if args.url:
             print(f"[*] Downloading video from {args.url}...")
-            downloader = VideoDownloader(output_dir=temp_dir)
-            temp_video_path = downloader.download(args.url)
+            downloader = VideoDownloader(
+                output_dir=temp_dir,
+                max_res=args.max_res,
+                subs_from_yt=args.subs_from_yt,
+                time_range=args.time_range
+            )
+            temp_video_path, temp_srt_path = downloader.download(args.url)
             
             # Safe Transfer: Move only successfully merged complete video to inputs/ directory
             video_filename = os.path.basename(temp_video_path)
@@ -74,12 +83,21 @@ def main() -> None:
         if not video_path or not os.path.exists(video_path):
             raise FileNotFoundError(f"Video file not found at: {video_path}")
 
-        # 2. Transcribe media audio to subtitle segments
-        print(f"[*] Initializing transcription engine ({args.model} on {args.device})...")
+        # 2. Transcribe media audio to subtitle segments or parse downloaded subtitles
         transcriber = SubtitleTranscriber(model_size=args.model, device=args.device)
 
-        print("[*] Transcribing speech to subtitle segments...")
-        subtitles = transcriber.transcribe(video_path, lang=args.lang)
+        if args.subs_from_yt:
+            if not temp_srt_path or not os.path.exists(temp_srt_path):
+                raise ValueError(
+                    f"Requested subtitle language '{args.subs_from_yt}' could not be downloaded from YouTube."
+                )
+            print(f"[*] Parsing downloaded YouTube subtitles: {temp_srt_path}...")
+            subtitles = SubtitleTranscriber.parse_srt(temp_srt_path)
+            print(f"[+] Bypassed Whisper transcription. Subtitles loaded successfully.")
+        else:
+            print(f"[*] Initializing transcription engine ({args.model} on {args.device})...")
+            print("[*] Transcribing speech to subtitle segments...")
+            subtitles = transcriber.transcribe(video_path, lang=args.lang)
 
         # Write srt file inside the isolated subtitles/ namespace
         transcriber.write_srt(subtitles, srt_out_path)
@@ -106,6 +124,7 @@ def main() -> None:
             print("[*] Cleaning up temporary workspaces...")
             shutil.rmtree(temp_dir)
             print("[+] Workspace cleaned.")
+
 
 if __name__ == "__main__":
     main()

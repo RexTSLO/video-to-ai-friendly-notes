@@ -9,40 +9,108 @@ class VideoDownloadError(Exception):
 class VideoDownloader:
     """A downloader module that handles downloading high-quality compatible .mp4 videos from YouTube using yt-dlp."""
 
-    def __init__(self, output_dir: str = "downloads") -> None:
-        """Initialize the VideoDownloader with an output directory.
+    def __init__(
+        self,
+        output_dir: str = "downloads",
+        max_res: int = 720,
+        subs_from_yt: str = None,
+        time_range: str = None
+    ) -> None:
+        """Initialize the VideoDownloader with download configurations.
 
         Args:
             output_dir: The directory where the downloaded video will be saved.
+            max_res: Maximum height resolution for the video (e.g., 480, 720, 1080).
+            subs_from_yt: Target language code to download subtitles from YouTube (e.g. "zh-TW").
+            time_range: Time range section to download in "HH:MM:SS-HH:MM:SS" format.
         """
         self.output_dir = output_dir
+        self.max_res = max_res
+        self.subs_from_yt = subs_from_yt
+        self.time_range = time_range
 
-    def download(self, url: str) -> str:
-        """Download the video from the given URL and return its absolute path.
+    def download(self, url: str) -> tuple[str, str | None]:
+        """Download the video from the given URL with options and return (video_path, subtitle_path).
 
         Args:
             url: The YouTube video URL to download.
 
         Returns:
-            The absolute path to the downloaded video file.
+            A tuple of (absolute_video_path, absolute_subtitle_path).
+            absolute_subtitle_path is None if no subtitle was downloaded.
 
         Raises:
-            VideoDownloadError: If the download or extraction fails.
+            VideoDownloadError: If the download, extraction, or time-range parsing fails.
         """
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
 
-        # Config for downloading highest quality mp4 merged video/audio
+        # Dynamic format based on max_res
         ydl_opts = {
-            'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+            'format': f'bestvideo[height<={self.max_res}][ext=mp4]+bestaudio[ext=m4a]/best[height<={self.max_res}][ext=mp4]/best',
             'outtmpl': os.path.join(self.output_dir, '%(title)s.%(ext)s'),
             'noplaylist': True,
         }
+
+        # Subtitles configuration
+        if self.subs_from_yt:
+            ydl_opts['write_subs'] = True
+            ydl_opts['write_auto_subs'] = True
+            ydl_opts['sub_langs'] = [self.subs_from_yt]
+            ydl_opts['postprocessors'] = [{
+                'key': 'FFmpegSubtitlesConvertor',
+                'format': 'srt',
+            }]
+
+        # Time range section configuration
+        if self.time_range:
+            def parse_time_to_seconds(time_str: str) -> float:
+                parts = time_str.strip().split(":")
+                if len(parts) == 3:
+                    hrs = int(parts[0])
+                    mins = int(parts[1])
+                    secs = float(parts[2])
+                    return hrs * 3600.0 + mins * 60.0 + secs
+                elif len(parts) == 2:
+                    mins = int(parts[0])
+                    secs = float(parts[1])
+                    return mins * 60.0 + secs
+                else:
+                    return float(parts[0])
+
+            try:
+                start_str, end_str = self.time_range.split("-")
+                start_sec = parse_time_to_seconds(start_str)
+                end_sec = parse_time_to_seconds(end_str)
+                from yt_dlp.utils import download_range_func
+                ydl_opts['download_ranges'] = download_range_func(None, [(start_sec, end_sec)])
+                ydl_opts['force_keyframes_at_cuts'] = True
+            except Exception as e:
+                raise VideoDownloadError(
+                    f"Invalid time range format: '{self.time_range}'. "
+                    f"Expected 'HH:MM:SS-HH:MM:SS'. Error: {str(e)}"
+                ) from e
+
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
                 filename = ydl.prepare_filename(info)
-                return os.path.abspath(filename)
+                video_path = os.path.abspath(filename)
+
+                # Scan for the generated srt file in self.output_dir
+                subtitle_path = None
+                if self.subs_from_yt:
+                    base_video_name = os.path.splitext(os.path.basename(video_path))[0]
+                    expected_srt = os.path.join(self.output_dir, f"{base_video_name}.{self.subs_from_yt}.srt")
+                    if os.path.exists(expected_srt):
+                        subtitle_path = os.path.abspath(expected_srt)
+                    else:
+                        # Fallback search
+                        for f in os.listdir(self.output_dir):
+                            if f.endswith(".srt") and base_video_name in f:
+                                subtitle_path = os.path.abspath(os.path.join(self.output_dir, f))
+                                break
+
+                return video_path, subtitle_path
         except yt_dlp.utils.DownloadError as e:
             raise VideoDownloadError(f"Failed to download video from {url}: {str(e)}") from e
-

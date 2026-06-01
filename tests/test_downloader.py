@@ -5,69 +5,101 @@ import yt_dlp
 
 from src.downloader import VideoDownloader, VideoDownloadError
 
-def test_download_video(tmp_path):
-    """Test successful video download verifying downloading of the test video and asserting the file's existence and .mp4 extension."""
+def test_download_video_default(tmp_path):
+    """Test successful default video download returning (video_path, None)."""
     output_dir = str(tmp_path / "custom_downloads")
     downloader = VideoDownloader(output_dir=output_dir)
     test_url = "https://www.youtube.com/watch?v=aqz-KE-bpKQ"
 
-    # We mock yt_dlp.YoutubeDL
     with patch("yt_dlp.YoutubeDL") as mock_ydl_class:
-        # Mock instance of YoutubeDL
         mock_ydl_instance = MagicMock()
         mock_ydl_class.return_value.__enter__.return_value = mock_ydl_instance
         
-        # Define returned info
         mock_info = {"title": "Test Video", "ext": "mp4"}
         mock_ydl_instance.extract_info.return_value = mock_info
         
-        # Mock prepare_filename to return the filename
         expected_filename = os.path.join(output_dir, "Test Video.mp4")
         mock_ydl_instance.prepare_filename.return_value = expected_filename
 
-        # Create dummy file to satisfy the "asserting file existence" requirement in a mocked environment
         os.makedirs(output_dir, exist_ok=True)
         with open(expected_filename, "w") as f:
             f.write("dummy")
 
-        # Act
-        result_path = downloader.download(test_url)
+        video_path, subtitle_path = downloader.download(test_url)
 
-        # Assertions
-        # 1. VideoDownloader creates the directory and the downloaded file exists with correct extension
-        assert os.path.exists(result_path)
-        assert result_path.endswith(".mp4")
+        assert os.path.exists(video_path)
+        assert video_path.endswith(".mp4")
+        assert subtitle_path is None
         
-        # 2. yt_dlp.YoutubeDL is instantiated with the correct options
         expected_opts = {
-            'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+            'format': 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best',
             'outtmpl': os.path.join(output_dir, '%(title)s.%(ext)s'),
             'noplaylist': True,
         }
         mock_ydl_class.assert_called_once_with(expected_opts)
-        
-        # 3. extract_info is called with the correct URL
         mock_ydl_instance.extract_info.assert_called_once_with(test_url, download=True)
-        
-        # 4. download returns the absolute path correctly
-        assert result_path == os.path.abspath(expected_filename)
+        assert video_path == os.path.abspath(expected_filename)
 
-def test_download_failure(tmp_path):
-    """Test that VideoDownloadError is raised if a DownloadError occurs during extraction."""
-    output_dir = str(tmp_path / "custom_downloads")
-    downloader = VideoDownloader(output_dir=output_dir)
+def test_download_video_with_opts(tmp_path):
+    """Test video download with all features enabled (subtitles, custom max_res, time_range)."""
+    output_dir = str(tmp_path / "custom_downloads_opts")
+    downloader = VideoDownloader(
+        output_dir=output_dir,
+        max_res=480,
+        subs_from_yt="zh-TW",
+        time_range="00:10:00-00:20:30"
+    )
     test_url = "https://www.youtube.com/watch?v=aqz-KE-bpKQ"
 
-    # We mock yt_dlp.YoutubeDL to raise DownloadError
     with patch("yt_dlp.YoutubeDL") as mock_ydl_class:
         mock_ydl_instance = MagicMock()
         mock_ydl_class.return_value.__enter__.return_value = mock_ydl_instance
         
-        # Raise DownloadError
+        mock_info = {"title": "Test Video", "ext": "mp4"}
+        mock_ydl_instance.extract_info.return_value = mock_info
+        
+        expected_video_filename = os.path.join(output_dir, "Test Video.mp4")
+        expected_srt_filename = os.path.join(output_dir, "Test Video.zh-TW.srt")
+        mock_ydl_instance.prepare_filename.return_value = expected_video_filename
+
+        os.makedirs(output_dir, exist_ok=True)
+        with open(expected_video_filename, "w") as f:
+            f.write("dummy video")
+        with open(expected_srt_filename, "w") as f:
+            f.write("dummy srt")
+
+        video_path, subtitle_path = downloader.download(test_url)
+
+        assert os.path.exists(video_path)
+        assert os.path.exists(subtitle_path)
+        assert subtitle_path.endswith(".zh-TW.srt")
+        
+        # Verify ydl_opts contents
+        called_args, called_kwargs = mock_ydl_class.call_args
+        opts = called_args[0]
+        
+        # 1. format respects max_res = 480
+        assert "height<=480" in opts['format']
+        # 2. subs_from_yt set
+        assert opts['write_subs'] is True
+        assert opts['write_auto_subs'] is True
+        assert opts['sub_langs'] == ["zh-TW"]
+        # 3. postprocessors to convert to srt
+        assert any(p['key'] == 'FFmpegSubtitlesConvertor' and p['format'] == 'srt' for p in opts.get('postprocessors', []))
+        # 4. time_range download_ranges set
+        assert 'download_ranges' in opts
+
+def test_download_failure(tmp_path):
+    """Test that VideoDownloadError is raised if a DownloadError occurs."""
+    output_dir = str(tmp_path / "custom_downloads_fail")
+    downloader = VideoDownloader(output_dir=output_dir)
+    test_url = "https://www.youtube.com/watch?v=aqz-KE-bpKQ"
+
+    with patch("yt_dlp.YoutubeDL") as mock_ydl_class:
+        mock_ydl_instance = MagicMock()
+        mock_ydl_class.return_value.__enter__.return_value = mock_ydl_instance
         mock_ydl_instance.extract_info.side_effect = yt_dlp.utils.DownloadError("Some error message")
 
-        # Act & Assert
-        # 5. If a DownloadError occurs, the class properly raises VideoDownloadError
         with pytest.raises(VideoDownloadError) as exc_info:
             downloader.download(test_url)
         

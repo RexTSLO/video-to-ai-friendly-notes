@@ -77,3 +77,51 @@ class SubtitleTranscriber:
                 f.write(f"{idx}\n")
                 f.write(f"{format_time(seg['start'])} --> {format_time(seg['end'])}\n")
                 f.write(f"{seg['text'].strip()}\n\n")
+
+    @staticmethod
+    def parse_srt(srt_filepath: str) -> list[dict]:
+        """Parse a standard .srt subtitle file into a list of segment dictionaries.
+
+        Args:
+            srt_filepath: Path to the .srt file.
+
+        Returns:
+            A list of segment dictionaries containing 'start', 'end', and 'text'.
+        """
+        if not os.path.exists(srt_filepath):
+            raise FileNotFoundError(f"SRT file not found at: {os.path.abspath(srt_filepath)}")
+
+        def parse_time(time_str: str) -> float:
+            time_str = time_str.replace(",", ".").strip()
+            parts = time_str.split(":")
+            if len(parts) == 3:
+                hrs = int(parts[0])
+                mins = int(parts[1])
+                secs = float(parts[2])
+                return hrs * 3600.0 + mins * 60.0 + secs
+            return 0.0
+
+        segments = []
+        with open(srt_filepath, "r", encoding="utf-8") as f:
+            content = f.read().strip()
+            if not content:
+                return []
+            
+            # Normalize line endings and split by empty line separating blocks
+            blocks = content.replace("\r\n", "\n").split("\n\n")
+            for block in blocks:
+                lines = [line.strip() for line in block.split("\n") if line.strip()]
+                if len(lines) >= 2:
+                    time_line = lines[1]
+                    if "-->" in time_line:
+                        time_parts = time_line.split("-->")
+                        start_sec = parse_time(time_parts[0])
+                        end_sec = parse_time(time_parts[1])
+                        text = " ".join(lines[2:])
+                        segments.append({
+                            "start": start_sec,
+                            "end": end_sec,
+                            "text": text
+                        })
+        return segments
+

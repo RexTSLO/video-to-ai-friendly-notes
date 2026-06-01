@@ -4,7 +4,7 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Tests Passed](https://img.shields.io/badge/tests-14%20passed-success.svg)](#unit--integration-testing)
+[![Tests Passed](https://img.shields.io/badge/tests-20%20passed-success.svg)](#unit--integration-testing)
 
 `video-to-ai-friendly-notes` is a modular, lightweight, and highly efficient Python command-line utility. It automates downloading lecture videos from YouTube (or processing local video files), detects slide changes, generates precise synchronized speech-to-text transcripts, and ultimately exports them into **beautifully typeset, highly structured, AI-friendly PDF study notes** (with robust out-of-the-box Traditional Chinese support).
 
@@ -18,7 +18,7 @@
     *   **Chinese & CJK Glyphs Support**: Proactively downloads and caches CJK fonts (`NotoSansCJKtc`) on first launch to eliminate empty block characters (Glyph errors), while offering an elegant defensive Helvetica font fallback.
     *   **High Semantic Structure**: Each page contains explicit `Slide X (Timestamp)` delimiters, a centered slide image, and chronological, multi-line auto-wrapped transcripts (`[MM:SS] Subtitles`). This layout is highly optimized for parsing by Multimodal Large Language Models (VLMs) and RAG parsers.
 4.  **Sandbox Workspace Isolation**: Video downloading is managed under a temporary sandbox. Successfully merged complete video files are safely transferred to the `inputs/` directory, preventing corrupted partial files from cluttering the project workspace.
-5.  **100% Offline CI-safe Mocks**: Features offline testing where all network or heavy external engines (`yt-dlp`, `faster-whisper`, `cv2`, `urllib`, `FPDF`) are mock decoupled. Run the entire suite of 14 tests in less than 2 seconds completely offline.
+5.  **100% Offline CI-safe Mocks**: Features offline testing where all network or heavy external engines (`yt-dlp`, `faster-whisper`, `cv2`, `urllib`, `FPDF`) are mock decoupled. Run the entire suite of 20 tests in less than 2 seconds completely offline.
 6.  **Smart Directory Dispatcher**: Keeps your workspace clean. Outputs are saved inside the `outputs/` directory and automatically isolated by type: PDFs to `outputs/pdf/`, subtitles to `outputs/subtitles/`, and OpenCV slide keyframe JPEGs are stored under their own dedicated `outputs/slides/{output_name}/` namespace.
 
 ---
@@ -95,6 +95,10 @@ python3 -m src.main -i "path/to/lecture.mp4" -o output_notes.pdf -t 15.0
 | `-l` | `--lang` | `zh` | Language code (default `zh` triggers Traditional Chinese prompt). |
 | `-t` | `--threshold`| `15.0` | OpenCV slide detection sensitivity threshold (lower = more keyframes). |
 | `-d` | `--device` | `cpu` | Target computation inference device (`cpu` or `cuda`). |
+| *None* | `--subs-from-yt` | *None* | Directly download specified subtitle language from YouTube (e.g. `zh-TW`), bypassing local Whisper. Errors out if missing. |
+| *None* | `--max-res` | `720` | Maximum height resolution for downloaded YouTube video (e.g., `480`, `720`, `1080`) to optimize download and OpenCV performance. |
+| *None* | `--time-range` | *None* | Specific section of the video to download and process in `HH:MM:SS-HH:MM:SS` format. |
+
 
 ---
 

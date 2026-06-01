@@ -145,3 +145,23 @@ def test_parse_srt_invalid(tmp_path):
     empty_file = tmp_path / "empty.srt"
     empty_file.write_text("", encoding="utf-8")
     assert SubtitleTranscriber.parse_srt(str(empty_file)) == []
+
+
+def test_parse_vtt(tmp_path):
+    """Test parsing a valid VTT file with standard headers, lack of block numbers, and tags."""
+    vtt_content = (
+        "WEBVTT\n\n"
+        "00:00:00.000 --> 00:00:02.500\n"
+        "Hello <c.traditional>World</c>\n\n"
+        "00:00:03.125 --> 00:00:05.002\n"
+        "<b>Welcome to VTT parsing</b>\n\n"
+    )
+    vtt_file = tmp_path / "test.vtt"
+    vtt_file.write_text(vtt_content, encoding="utf-8")
+
+    segments = SubtitleTranscriber.parse_srt(str(vtt_file))
+
+    assert len(segments) == 2
+    assert segments[0] == {"start": 0.0, "end": 2.5, "text": "Hello World"}
+    assert segments[1] == {"start": 3.125, "end": 5.002, "text": "Welcome to VTT parsing"}
+

@@ -80,16 +80,16 @@ class SubtitleTranscriber:
 
     @staticmethod
     def parse_srt(srt_filepath: str) -> list[dict]:
-        """Parse a standard .srt subtitle file into a list of segment dictionaries.
+        """Parse a standard .srt or .vtt subtitle file into a list of segment dictionaries.
 
         Args:
-            srt_filepath: Path to the .srt file.
+            srt_filepath: Path to the .srt or .vtt file.
 
         Returns:
             A list of segment dictionaries containing 'start', 'end', and 'text'.
         """
         if not os.path.exists(srt_filepath):
-            raise FileNotFoundError(f"SRT file not found at: {os.path.abspath(srt_filepath)}")
+            raise FileNotFoundError(f"Subtitle file not found at: {os.path.abspath(srt_filepath)}")
 
         def parse_time(time_str: str) -> float:
             time_str = time_str.replace(",", ".").strip()
@@ -99,7 +99,11 @@ class SubtitleTranscriber:
                 mins = int(parts[1])
                 secs = float(parts[2])
                 return hrs * 3600.0 + mins * 60.0 + secs
-            return 0.0
+            elif len(parts) == 2:
+                mins = int(parts[0])
+                secs = float(parts[1])
+                return mins * 60.0 + secs
+            return float(time_str) if time_str else 0.0
 
         segments = []
         with open(srt_filepath, "r", encoding="utf-8") as f:
@@ -111,17 +115,30 @@ class SubtitleTranscriber:
             blocks = content.replace("\r\n", "\n").split("\n\n")
             for block in blocks:
                 lines = [line.strip() for line in block.split("\n") if line.strip()]
-                if len(lines) >= 2:
-                    time_line = lines[1]
-                    if "-->" in time_line:
-                        time_parts = time_line.split("-->")
-                        start_sec = parse_time(time_parts[0])
-                        end_sec = parse_time(time_parts[1])
-                        text = " ".join(lines[2:])
-                        segments.append({
-                            "start": start_sec,
-                            "end": end_sec,
-                            "text": text
-                        })
+                # Find the timing line that contains "-->"
+                time_idx = -1
+                for idx, line in enumerate(lines):
+                    if "-->" in line:
+                        time_idx = idx
+                        break
+                
+                if time_idx != -1 and time_idx + 1 < len(lines):
+                    time_line = lines[time_idx]
+                    time_parts = time_line.split("-->")
+                    start_sec = parse_time(time_parts[0])
+                    end_sec = parse_time(time_parts[1])
+                    
+                    # Text is all lines after the timing line
+                    text = " ".join(lines[time_idx + 1:])
+                    
+                    # Strip VTT style/tag sequences (e.g. <c.traditional>, <b>)
+                    import re
+                    text = re.sub(r"<[^>]+>", "", text)
+                    
+                    segments.append({
+                        "start": start_sec,
+                        "end": end_sec,
+                        "text": text
+                    })
         return segments
 

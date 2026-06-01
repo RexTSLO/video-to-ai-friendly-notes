@@ -54,13 +54,10 @@ class VideoDownloader:
 
         # Subtitles configuration
         if self.subs_from_yt:
-            ydl_opts['write_subs'] = True
-            ydl_opts['write_auto_subs'] = True
-            ydl_opts['sub_langs'] = [self.subs_from_yt]
-            ydl_opts['postprocessors'] = [{
-                'key': 'FFmpegSubtitlesConvertor',
-                'format': 'srt',
-            }]
+            ydl_opts['writesubtitles'] = True
+            ydl_opts['writeautomaticsub'] = True
+            ydl_opts['subtitleslangs'] = [self.subs_from_yt]
+            ydl_opts['convertsubtitles'] = 'srt'
 
         # Time range section configuration
         if self.time_range:
@@ -105,11 +102,32 @@ class VideoDownloader:
                     if os.path.exists(expected_srt):
                         subtitle_path = os.path.abspath(expected_srt)
                     else:
-                        # Fallback search
+                        # Fallback search for .srt
                         for f in os.listdir(self.output_dir):
                             if f.endswith(".srt") and base_video_name in f:
                                 subtitle_path = os.path.abspath(os.path.join(self.output_dir, f))
                                 break
+                    
+                    # If no .srt found, look for .vtt and convert using FFmpeg
+                    if not subtitle_path:
+                        expected_vtt = os.path.join(self.output_dir, f"{base_video_name}.{self.subs_from_yt}.vtt")
+                        vtt_path = None
+                        if os.path.exists(expected_vtt):
+                            vtt_path = os.path.abspath(expected_vtt)
+                        else:
+                            for f in os.listdir(self.output_dir):
+                                if f.endswith(".vtt") and base_video_name in f:
+                                    vtt_path = os.path.abspath(os.path.join(self.output_dir, f))
+                                    break
+                        if vtt_path:
+                            srt_path = os.path.splitext(vtt_path)[0] + ".srt"
+                            try:
+                                import subprocess
+                                subprocess.run(["ffmpeg", "-y", "-i", vtt_path, srt_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+                                if os.path.exists(srt_path):
+                                    subtitle_path = srt_path
+                            except Exception as ffmpeg_err:
+                                print(f"[-] WARNING: FFmpeg VTT to SRT conversion failed: {ffmpeg_err}")
 
                 return video_path, subtitle_path
         except yt_dlp.utils.DownloadError as e:

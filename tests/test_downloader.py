@@ -81,11 +81,11 @@ def test_download_video_with_opts(tmp_path):
         # 1. format respects max_res = 480
         assert "height<=480" in opts['format']
         # 2. subs_from_yt set
-        assert opts['write_subs'] is True
-        assert opts['write_auto_subs'] is True
-        assert opts['sub_langs'] == ["zh-TW"]
-        # 3. postprocessors to convert to srt
-        assert any(p['key'] == 'FFmpegSubtitlesConvertor' and p['format'] == 'srt' for p in opts.get('postprocessors', []))
+        assert opts['writesubtitles'] is True
+        assert opts['writeautomaticsub'] is True
+        assert opts['subtitleslangs'] == ["zh-TW"]
+        # 3. convertsubtitles set
+        assert opts['convertsubtitles'] == 'srt'
         # 4. time_range download_ranges set
         assert 'download_ranges' in opts
 

@@ -33,7 +33,7 @@ def main() -> None:
     parser.add_argument("--subs-from-yt", default=None, help="Download specified subtitle language from YouTube directly (e.g., zh-TW), skipping Whisper.")
     parser.add_argument("--max-res", type=int, default=720, help="Maximum video resolution height to download (e.g., 480, 720, 1080).")
     parser.add_argument("--time-range", default=None, help="Download a specific section of the video in HH:MM:SS-HH:MM:SS format.")
-    parser.add_argument("--srt", default=None, help="Path to a local .srt subtitle file, skipping Whisper and YouTube subtitle downloads.")
+    parser.add_argument("--srt", default=None, help="Path to a local .srt or .vtt subtitle file, skipping Whisper and YouTube subtitle downloads.")
     parser.add_argument("--min-duration", type=float, default=1.0, help="Minimum slide duration cooldown in seconds between two slide transitions (default: 1.0).")
 
     args = parser.parse_args()
@@ -91,11 +91,11 @@ def main() -> None:
         if args.srt:
             if not os.path.exists(args.srt):
                 raise FileNotFoundError(
-                    f"Specified local SRT file not found at: {os.path.abspath(args.srt)}"
+                    f"Specified local subtitle file not found at: {os.path.abspath(args.srt)}"
                 )
             print(f"[*] Parsing specified local subtitles: {args.srt}...")
             subtitles = SubtitleTranscriber.parse_srt(args.srt)
-            print(f"[+] Bypassed Whisper transcription & YouTube download. Subtitles loaded from local SRT successfully.")
+            print(f"[+] Bypassed Whisper transcription & YouTube download. Subtitles loaded from local subtitle file successfully.")
         elif args.subs_from_yt:
             if not temp_srt_path or not os.path.exists(temp_srt_path):
                 raise ValueError(

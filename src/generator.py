@@ -116,14 +116,14 @@ class PDFGenerator:
             # 4. Transcribed text content mapping
             pdf.set_font(font_family, "", 10)
             if not slide["subtitles"]:
-                pdf.multi_cell(0, 7, "[No vocal lecture speech recorded during this slide duration.]")
+                pdf.multi_cell(0, 7, "[No vocal lecture speech recorded during this slide duration.]", new_x="LMARGIN", new_y="NEXT")
             else:
                 for sub in slide["subtitles"]:
                     total_seconds = int(round(float(sub["start"])))
                     mins = total_seconds // 60
                     secs = total_seconds % 60
                     time_tag = f"[{mins:02d}:{secs:02d}]"
-                    pdf.multi_cell(0, 7, f"{time_tag} {sub['text'].strip()}")
+                    pdf.multi_cell(0, 7, f"{time_tag} {sub['text'].strip()}", new_x="LMARGIN", new_y="NEXT")
 
             pdf.ln(10)
 

@@ -125,3 +125,7 @@ cython_debug/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Git worktrees
+.worktrees/
+worktrees/

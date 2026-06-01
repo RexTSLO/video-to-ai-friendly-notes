@@ -96,34 +96,21 @@ class PDFGenerator:
         for idx, slide in enumerate(bound_slides, 1):
             pdf.add_page()
 
-            # 1. Slide Title Header (extremely clean structural Markdown block formatting for LLM/VLM processing)
-            pdf.set_font(font_family, "", 16)
-            pdf.cell(0, 10, f"### Slide {idx} (Timestamp: {slide['timestamp']:.2f}s) ###", ln=True, align="L")
-            pdf.ln(4)
-
-            # 2. Slide Image Rendering (with safety dimensions preserving aspect ratio)
+            # 1. Slide Image Rendering (with safety dimensions preserving aspect ratio)
             if os.path.exists(slide["image_path"]):
                 # Scale width to fit nicely within printable page A4 borders (210 - 15 - 15 = 180)
                 # Drawing without explicit X offset allows FPDF2 to safely advance the cursor Y.
                 pdf.image(slide["image_path"], w=180)
                 pdf.ln(8)
 
-            # 3. Transcriptions section header
-            pdf.set_font(font_family, "", 12)
-            pdf.cell(0, 8, "--- Subtitles & Lecture Notes ---", ln=True)
-            pdf.ln(2)
-
-            # 4. Transcribed text content mapping
+            # 2. Transcribed text content mapping
             pdf.set_font(font_family, "", 10)
             if not slide["subtitles"]:
                 pdf.multi_cell(0, 7, "[No vocal lecture speech recorded during this slide duration.]", new_x="LMARGIN", new_y="NEXT")
             else:
-                for sub in slide["subtitles"]:
-                    total_seconds = int(round(float(sub["start"])))
-                    mins = total_seconds // 60
-                    secs = total_seconds % 60
-                    time_tag = f"[{mins:02d}:{secs:02d}]"
-                    pdf.multi_cell(0, 7, f"{time_tag} {sub['text'].strip()}", new_x="LMARGIN", new_y="NEXT")
+                # Concatenate all subtitles into a single continuous block without timestamps or segment wrap newlines
+                combined_text = " ".join(sub["text"].strip() for sub in slide["subtitles"])
+                pdf.multi_cell(0, 7, combined_text, new_x="LMARGIN", new_y="NEXT")
 
             pdf.ln(10)
 

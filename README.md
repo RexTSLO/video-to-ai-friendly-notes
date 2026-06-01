@@ -17,8 +17,9 @@
 3.  **VLM & RAG Optimized PDF Layout**:
     *   **Chinese & CJK Glyphs Support**: Proactively downloads and caches CJK fonts (`NotoSansCJKtc`) on first launch to eliminate empty block characters (Glyph errors), while offering an elegant defensive Helvetica font fallback.
     *   **High Semantic Structure**: Each page contains explicit `Slide X (Timestamp)` delimiters, a centered slide image, and chronological, multi-line auto-wrapped transcripts (`[MM:SS] Subtitles`). This layout is highly optimized for parsing by Multimodal Large Language Models (VLMs) and RAG parsers.
-4.  **Sandbox Workspace Isolation**: OpenCV captured frames are automatically sandboxed in temporary folders using `tempfile` and cleanly purged when the pipeline exits. Downloaded videos are safely and permanently stored under the **`inputs/`** directory for easy offline archiving.
+4.  **Sandbox Workspace Isolation**: Video downloading is managed under a temporary sandbox. Successfully merged complete video files are safely transferred to the `inputs/` directory, preventing corrupted partial files from cluttering the project workspace.
 5.  **100% Offline CI-safe Mocks**: Features offline testing where all network or heavy external engines (`yt-dlp`, `faster-whisper`, `cv2`, `urllib`, `FPDF`) are mock decoupled. Run the entire suite of 14 tests in less than 2 seconds completely offline.
+6.  **Smart Directory Dispatcher**: Keeps your workspace clean. Outputs are saved inside the `outputs/` directory and automatically isolated by type: PDFs to `outputs/pdf/`, subtitles to `outputs/subtitles/`, and OpenCV slide keyframe JPEGs are stored under their own dedicated `outputs/slides/{output_name}/` namespace.
 
 ---
 
@@ -103,6 +104,11 @@ python3 -m src.main -i "path/to/lecture.mp4" -o output_notes.pdf -t 15.0
 video-to-ai-friendly-notes/
 ├── LICENSE             # MIT License
 ├── requirements.txt    # Project Python packages
+├── inputs/             # Successfully downloaded videos
+├── outputs/            # Isolated and typeset project outputs
+│   ├── pdf/            # Formatted PDF notes
+│   ├── subtitles/      # Synchronization .srt subtitles
+│   └── slides/         # OpenCV typeset slide images
 ├── src/
 │   ├── __init__.py
 │   ├── main.py         # Entrypoint orchestrator and CLI parser

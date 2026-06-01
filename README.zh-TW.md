@@ -17,8 +17,9 @@
 3.  **對 AI / RAG 極友善的 PDF 講義編排**：
     *   **繁體中文支援**：首次執行時會自動下載並註冊 `NotoSansCJKtc` 字型，徹底防止中文字元在 PDF 中變成空白方塊（Glyph Error），並具備優雅的 system font fallback 機制。
     *   **高結構化 layout**：每頁包含明確的 `Slide X (Timestamp)` 標記區塊、投影片縮圖，以及與時間軸精準對齊的字幕筆記文字（`[MM:SS] 文字`），利於各類多模態大模型（VLM）與 RAG 系統直接高精確度解析。
-4.  **強健的沙盒機制**：自動管理 `tempfile` 臨時資料夾。OpenCV 擷取的暫存影格在 Pipeline 結束時會被沙盒自動清理乾淨；而下載的影片則會預設安全且永久保留於 `inputs/` 目錄中，方便使用者留存或未來重複讀取。
+4.  **強健的沙盒機制**：自動管理 `tempfile` 臨時資料夾。影片下載過程將先置於臨時沙盒中，待安全且完整下載合併完畢後才轉移至 `inputs/` 目錄，防止損壞的不全檔案殘留於工作區。
 5.  **100% 離線 CI-safe 測試**：本專案採用嚴格的 TDD 設計，所有重型與網路依賴元件（`yt-dlp`、`faster-whisper`、`cv2`、`urllib`、`fpdf2`）皆有對應 of mock 測試，使 14 個單元與整合測試案例能在 2 秒內於無 GPU、無連網環境下秒過。
+6.  **智慧型產出目錄分流 (Smart Directory Dispatcher)**：為維持工作區簡潔與美感，產出的檔案不再散置於根目錄。所有產出預設安全儲存於 `outputs/` 目錄中並根據類型智慧分流：PDF 講義存放於 `outputs/pdf/`，SRT 字幕存放於 `outputs/subtitles/`，而 OpenCV 的投影片 JPEG 影格則永久歸納於專屬的 `outputs/slides/{產出名稱}/` 資料夾中。
 
 ---
 
@@ -103,6 +104,11 @@ python3 -m src.main -i "path/to/lecture.mp4" -o output_notes.pdf -t 15.0
 video-to-ai-friendly-notes/
 ├── LICENSE             # MIT 授權條款
 ├── requirements.txt    # 專案依賴描述
+├── inputs/             # 存放下載完成的影片
+├── outputs/            # 智慧分流專案產出
+│   ├── pdf/            # 存放生成的 PDF 講義
+│   ├── subtitles/      # 存放輸出的 .srt 字幕
+│   └── slides/         # 依名稱分流存放投影片 JPEG 影格
 ├── src/
 │   ├── __init__.py
 │   ├── main.py         # 總入口與 CLI 沙盒協調器

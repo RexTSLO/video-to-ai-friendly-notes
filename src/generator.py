@@ -106,11 +106,11 @@ class PDFGenerator:
             # 2. Transcribed text content mapping
             pdf.set_font(font_family, "", 10)
             if not slide["subtitles"]:
-                pdf.multi_cell(0, 7, "[No vocal lecture speech recorded during this slide duration.]", new_x="LMARGIN", new_y="NEXT")
+                pdf.multi_cell(0, 7, "[No vocal lecture speech recorded during this slide duration.]", new_x="LMARGIN", new_y="NEXT", align="L")
             else:
                 # Concatenate all subtitles into a single continuous block without timestamps or segment wrap newlines
                 combined_text = " ".join(sub["text"].strip() for sub in slide["subtitles"])
-                pdf.multi_cell(0, 7, combined_text, new_x="LMARGIN", new_y="NEXT")
+                pdf.multi_cell(0, 7, combined_text, new_x="LMARGIN", new_y="NEXT", align="L")
 
             pdf.ln(10)
 

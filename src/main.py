@@ -34,6 +34,7 @@ def main() -> None:
     parser.add_argument("--max-res", type=int, default=720, help="Maximum video resolution height to download (e.g., 480, 720, 1080).")
     parser.add_argument("--time-range", default=None, help="Download a specific section of the video in HH:MM:SS-HH:MM:SS format.")
     parser.add_argument("--srt", default=None, help="Path to a local .srt subtitle file, skipping Whisper and YouTube subtitle downloads.")
+    parser.add_argument("--min-duration", type=float, default=1.0, help="Minimum slide duration cooldown in seconds between two slide transitions (default: 1.0).")
 
     args = parser.parse_args()
 
@@ -114,7 +115,7 @@ def main() -> None:
 
         # 3. Detect slide transition keyframes (directly save JPEGs inside slides/ namespace)
         print("[*] Extracting slide transition frames...")
-        detector = SlideDetector(threshold=args.threshold)
+        detector = SlideDetector(threshold=args.threshold, min_slide_duration=args.min_duration)
         keyframes = detector.detect_slides(video_path, slides_out_dir)
         print(f"[+] Extracted {len(keyframes)} slide frames saved at: {slides_out_dir}")
 

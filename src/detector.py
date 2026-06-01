@@ -8,7 +8,7 @@ class SlideDetector:
     based on frame difference analysis.
     """
 
-    def __init__(self, threshold: float = 15.0, min_slide_duration: float = 5.0) -> None:
+    def __init__(self, threshold: float = 15.0, min_slide_duration: float = 1.0) -> None:
         """Initialize the SlideDetector with sensitivity thresholds and duration cooldowns.
 
         Args:

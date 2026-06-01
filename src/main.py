@@ -25,7 +25,7 @@ def main() -> None:
     group.add_argument("-u", "--url", help="YouTube video URL to download.")
     group.add_argument("-i", "--input", help="Local video file path.")
 
-    parser.add_argument("-o", "--output", default="lecture_notes.pdf", help="Output destination PDF path.")
+    parser.add_argument("-o", "--output", default="outputs/lecture_notes.pdf", help="Output destination PDF path.")
     parser.add_argument("-m", "--model", default="medium", help="Whisper model size (tiny, base, small, medium, large-v3).")
     parser.add_argument("-l", "--lang", default="zh", help="Language code (e.g. zh, en).")
     parser.add_argument("-t", "--threshold", type=float, default=15.0, help="Slide change detection MAE threshold (lower = more sensitive).")
@@ -38,6 +38,11 @@ def main() -> None:
     temp_img_dir = os.path.join(temp_dir, "frames")
 
     try:
+        # Ensure the destination directory exists securely
+        output_dir = os.path.dirname(os.path.abspath(args.output))
+        if output_dir:
+            os.makedirs(output_dir, exist_ok=True)
+
         video_path = args.input
 
         # 1. Download video if URL is provided

@@ -98,3 +98,46 @@ def test_orchestration_pipeline_mocked(tmp_path):
 
         # 6. Finally block sweeps directories cleanly
         mock_rmtree.assert_called_once_with(mock_temp_dir)
+
+
+def test_orchestration_default_output_mocked(tmp_path):
+    """Test orchestration pipeline using default output directory creation."""
+    test_args = [
+        "src.main",
+        "--input", "dummy_video_path.mp4"
+    ]
+    
+    with patch("sys.argv", test_args), \
+         patch("os.path.exists") as mock_exists, \
+         patch("os.makedirs") as mock_makedirs, \
+         patch("src.main.tempfile.mkdtemp") as mock_mkdtemp, \
+         patch("src.main.shutil.rmtree") as mock_rmtree, \
+         patch("src.main.SubtitleTranscriber") as mock_transcriber_class, \
+         patch("src.main.SlideDetector") as mock_detector_class, \
+         patch("src.main.PDFGenerator") as mock_generator_class:
+
+        mock_exists.side_effect = lambda path: True
+        mock_mkdtemp.return_value = "dummy_temp"
+
+        mock_transcriber_instance = MagicMock()
+        mock_transcriber_class.return_value = mock_transcriber_instance
+        mock_transcriber_instance.transcribe.return_value = []
+
+        mock_detector_instance = MagicMock()
+        mock_detector_class.return_value = mock_detector_instance
+        mock_detector_instance.detect_slides.return_value = []
+
+        mock_generator_instance = MagicMock()
+        mock_generator_class.return_value = mock_generator_instance
+
+        # Act
+        main()
+
+        # Assert
+        expected_output_dir = os.path.dirname(os.path.abspath("outputs/lecture_notes.pdf"))
+        mock_makedirs.assert_any_call(expected_output_dir, exist_ok=True)
+        
+        expected_pdf = "outputs/lecture_notes.pdf"
+        expected_srt = "outputs/lecture_notes.srt"
+        mock_transcriber_instance.write_srt.assert_called_once_with([], expected_srt)
+        mock_generator_instance.generate.assert_called_once_with([], [], expected_pdf)

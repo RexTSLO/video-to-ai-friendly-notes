@@ -377,3 +377,116 @@ def test_max_res_and_time_range_passed(tmp_path):
             os.remove(expected_final_video)
 
 
+def test_local_srt_success(tmp_path):
+    """Test that specifying --srt correctly reads the local srt file and bypasses Whisper/YT downloads."""
+    output_pdf = str(tmp_path / "final_output.pdf")
+    expected_srt = os.path.abspath(str(tmp_path / "subtitles" / "final_output.srt"))
+    local_srt_path = str(tmp_path / "my_local.srt")
+    
+    # Create the local srt file
+    with open(local_srt_path, "w") as f:
+        f.write("1\n00:00:00,000 --> 00:00:02,000\nLocal srt content\n\n")
+
+    test_args = [
+        "src.main",
+        "--url", "https://www.youtube.com/watch?v=mocked",
+        "--output", output_pdf,
+        "--srt", local_srt_path
+    ]
+
+    with patch("sys.argv", test_args), \
+         patch("src.main.tempfile.mkdtemp") as mock_mkdtemp, \
+         patch("src.main.shutil.rmtree") as mock_rmtree, \
+         patch("src.main.shutil.move") as mock_move, \
+         patch("src.main.VideoDownloader") as mock_downloader_class, \
+         patch("src.main.SubtitleTranscriber") as mock_transcriber_class, \
+         patch("src.main.SlideDetector") as mock_detector_class, \
+         patch("src.main.PDFGenerator") as mock_generator_class:
+
+        mock_temp_dir = str(tmp_path / "mock_workspace")
+        mock_mkdtemp.return_value = mock_temp_dir
+
+        mock_downloader_instance = MagicMock()
+        mock_downloader_class.return_value = mock_downloader_instance
+        downloaded_video = os.path.join(mock_temp_dir, "lecture.mp4")
+        mock_downloader_instance.download.return_value = (downloaded_video, None)
+
+        os.makedirs(mock_temp_dir, exist_ok=True)
+        with open(downloaded_video, "w") as f:
+            f.write("dummy video data")
+
+        # Mock transcriber parse_srt
+        mock_transcriber_instance = MagicMock()
+        mock_transcriber_class.return_value = mock_transcriber_instance
+        dummy_subs = [{"start": 0.0, "end": 2.0, "text": "local parsed text"}]
+        mock_transcriber_class.parse_srt.return_value = dummy_subs
+
+        # Mock detector and generator
+        mock_detector_instance = MagicMock()
+        mock_detector_class.return_value = mock_detector_instance
+        mock_detector_instance.detect_slides.return_value = []
+        mock_generator_instance = MagicMock()
+        mock_generator_class.return_value = mock_generator_instance
+
+        # Setup side effect for mock_move to securely simulate video transfer
+        expected_final_video = os.path.abspath(os.path.join("inputs", "lecture.mp4"))
+        def mock_move_side_effect(src, dst):
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            with open(dst, "w") as f:
+                f.write("moved dummy video")
+        mock_move.side_effect = mock_move_side_effect
+
+        # Act
+        main()
+
+        # Assertions
+        # 1. Downloader called without subtitle parameter
+        mock_downloader_class.assert_called_once_with(
+            output_dir=mock_temp_dir,
+            max_res=720,
+            subs_from_yt=None,
+            time_range=None
+        )
+        
+        # 2. Whisper transcription is BYPASSED
+        mock_transcriber_instance.transcribe.assert_not_called()
+        
+        # 3. parse_srt is called on the local srt file
+        mock_transcriber_class.parse_srt.assert_called_once_with(local_srt_path)
+        
+        # 4. parsed subtitles are written to srt_out_path
+        mock_transcriber_instance.write_srt.assert_called_once_with(dummy_subs, expected_srt)
+
+        # Cleanup mock final video
+        if os.path.exists(expected_final_video):
+            os.remove(expected_final_video)
+
+
+def test_local_srt_failure(tmp_path):
+    """Test that specifying a non-existent --srt file fails immediately."""
+    output_pdf = str(tmp_path / "final_output.pdf")
+    non_existent_srt = str(tmp_path / "does_not_exist.srt")
+    
+    test_args = [
+        "src.main",
+        "--url", "https://www.youtube.com/watch?v=mocked",
+        "--output", output_pdf,
+        "--srt", non_existent_srt
+    ]
+
+    with patch("sys.argv", test_args), \
+         patch("src.main.tempfile.mkdtemp") as mock_mkdtemp, \
+         patch("src.main.shutil.rmtree") as mock_rmtree, \
+         patch("src.main.VideoDownloader") as mock_downloader_class, \
+         patch("src.main.SubtitleTranscriber") as mock_transcriber_class:
+
+        mock_temp_dir = str(tmp_path / "mock_workspace")
+        mock_mkdtemp.return_value = mock_temp_dir
+
+        # Act & Assert
+        # If no subtitle, it must raise ValueError/FileNotFoundError to terminate
+        with pytest.raises((ValueError, FileNotFoundError, SystemExit, RuntimeError)):
+            main()
+
+
+

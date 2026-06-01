@@ -4,7 +4,7 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Tests Passed](https://img.shields.io/badge/tests-20%20passed-success.svg)](#單元與整合測試)
+[![Tests Passed](https://img.shields.io/badge/tests-22%20passed-success.svg)](#單元與整合測試)
 
 `video-to-ai-friendly-notes` 是一個模組化、輕量且高效的 Python 工具。它能夠一鍵下載 YouTube 課程影片（或讀取本地影片），自動偵測投影片切換畫面，整合語音轉文字（Speech-to-Text）生成精準字幕，最終編排輸出成**對 AI / LLM / RAG 極度友善的高結構化 PDF 講義筆記**（且完美支援繁體中文）。
 
@@ -98,6 +98,8 @@ python3 -m src.main -i "path/to/lecture.mp4" -o output_notes.pdf -t 15.0
 | *無* | `--subs-from-yt` | *None* | 直接從 YouTube 下載指定的字幕語言（例如 `zh-TW`）並跳過本地 Whisper 轉譯。若該影片無此字幕則會報錯並終止。 |
 | *無* | `--max-res` | `720` | 限制下載 YouTube 影片的最大高度解析度（例如 `480`, `720`, `1080`），有效縮短下載時間及提升 OpenCV 影格處理效率。 |
 | *無* | `--time-range` | *None* | 指定要下載與處理的影片時間區段，格式為 `HH:MM:SS-HH:MM:SS`（例如 `00:10:00-00:20:30`）。 |
+| *無* | `--srt` | *None* | 指定本地 `.srt` 字幕檔案路徑，完全跳過 Whisper 語音轉譯與 YouTube 字幕下載流程。 |
+
 
 
 ---

@@ -4,7 +4,7 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Tests Passed](https://img.shields.io/badge/tests-20%20passed-success.svg)](#unit--integration-testing)
+[![Tests Passed](https://img.shields.io/badge/tests-22%20passed-success.svg)](#unit--integration-testing)
 
 `video-to-ai-friendly-notes` is a modular, lightweight, and highly efficient Python command-line utility. It automates downloading lecture videos from YouTube (or processing local video files), detects slide changes, generates precise synchronized speech-to-text transcripts, and ultimately exports them into **beautifully typeset, highly structured, AI-friendly PDF study notes** (with robust out-of-the-box Traditional Chinese support).
 
@@ -98,6 +98,8 @@ python3 -m src.main -i "path/to/lecture.mp4" -o output_notes.pdf -t 15.0
 | *None* | `--subs-from-yt` | *None* | Directly download specified subtitle language from YouTube (e.g. `zh-TW`), bypassing local Whisper. Errors out if missing. |
 | *None* | `--max-res` | `720` | Maximum height resolution for downloaded YouTube video (e.g., `480`, `720`, `1080`) to optimize download and OpenCV performance. |
 | *None* | `--time-range` | *None* | Specific section of the video to download and process in `HH:MM:SS-HH:MM:SS` format. |
+| *None* | `--srt` | *None* | Path to a local `.srt` file to use, completely bypassing Whisper transcribing and YouTube subtitle downloading. |
+
 
 
 ---

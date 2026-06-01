@@ -44,6 +44,9 @@ class SlideDetector:
     def detect_slides(self, video_path: str, output_img_dir: str) -> list[dict]:
         """Detect slide transitions from a video and persist keyframes as JPEGs.
 
+        Implements optimal anti-ghosting stabilized capture, blank frame filtering,
+        and automatic final frame protection.
+
         Args:
             video_path: Absolute or relative path to the source video file.
             output_img_dir: Directory where captured keyframe images will be saved.
@@ -71,6 +74,10 @@ class SlideDetector:
         keyframes = []
         prev_frame = None
         last_transition_time = -self.min_slide_duration
+        
+        # Anti-ghosting variables (Optimized Feature 1 & 2)
+        transition_pending = False
+        pending_transition_time = 0.0
 
         # Iterate through the video sampling at 1 frame per second interval
         for frame_idx in range(0, total_frames, sample_interval):
@@ -82,25 +89,59 @@ class SlideDetector:
             current_time = float(frame_idx) / fps if fps > 0.0 else float(frame_idx) / 30.0
 
             if prev_frame is None:
-                # Force capture the first frame
-                prev_frame = frame.copy()
-                img_name = "slide_0.00.jpg"
-                img_path = os.path.abspath(os.path.join(output_img_dir, img_name))
-                cv2.imwrite(img_path, frame, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
-                keyframes.append({"timestamp": 0.0, "image_path": img_path})
-                last_transition_time = 0.0
+                # Force capture the first frame ONLY if it's not a solid blank/black screen (Optimized Feature 3)
+                # Standard deviation < 5.0 indicates a single solid color screen (no content)
+                if np.std(frame) >= 5.0:
+                    prev_frame = frame.copy()
+                    img_name = "slide_0.00.jpg"
+                    img_path = os.path.abspath(os.path.join(output_img_dir, img_name))
+                    cv2.imwrite(img_path, frame, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
+                    keyframes.append({"timestamp": 0.0, "image_path": img_path})
+                    last_transition_time = 0.0
                 continue
 
             diff = self._calculate_diff(prev_frame, frame)
-            if diff > self.threshold and (current_time - last_transition_time) >= self.min_slide_duration:
-                # Transition detected
-                img_name = f"slide_{current_time:.2f}.jpg"
-                img_path = os.path.abspath(os.path.join(output_img_dir, img_name))
-                cv2.imwrite(img_path, frame, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
-                keyframes.append({"timestamp": current_time, "image_path": img_path})
-                last_transition_time = current_time
+            
+            # 1. Check if we have a pending transition that has now stabilized (diff drops below threshold)
+            if transition_pending and diff < self.threshold:
+                # Ensure the stabilized frame is not a solid blank screen
+                if np.std(frame) >= 5.0:
+                    img_name = f"slide_{pending_transition_time:.2f}.jpg"
+                    img_path = os.path.abspath(os.path.join(output_img_dir, img_name))
+                    cv2.imwrite(img_path, frame, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
+                    keyframes.append({"timestamp": pending_transition_time, "image_path": img_path})
+                    last_transition_time = pending_transition_time
+                transition_pending = False
+
+            # 2. Check for new transition trigger (MAE exceeds threshold and cooldown has passed)
+            elif diff > self.threshold and (current_time - last_transition_time) >= self.min_slide_duration:
+                # Flag transition pending, wait for next frame to stabilize to avoid blurry animations
+                transition_pending = True
+                pending_transition_time = current_time
 
             prev_frame = frame.copy()
+
+        # Defensive final frame flush in case video ends on a pending transition
+        if transition_pending and prev_frame is not None:
+            if np.std(prev_frame) >= 5.0:
+                img_name = f"slide_{pending_transition_time:.2f}.jpg"
+                img_path = os.path.abspath(os.path.join(output_img_dir, img_name))
+                cv2.imwrite(img_path, prev_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
+                keyframes.append({"timestamp": pending_transition_time, "image_path": img_path})
+                last_transition_time = pending_transition_time
+
+        # 3. Automatic tail-frame capture (Optimized Feature 3)
+        # Append the final frame if it is distant enough from the last transition to protect tail slides
+        final_frame_idx = total_frames - 1
+        final_time = float(final_frame_idx) / fps if fps > 0.0 else float(final_frame_idx) / 30.0
+        if final_frame_idx >= 0 and (final_time - last_transition_time) >= self.min_slide_duration:
+            cap.set(cv2.CAP_PROP_POS_FRAMES, final_frame_idx)
+            ret, frame = cap.read()
+            if ret and np.std(frame) >= 5.0:
+                img_name = f"slide_{final_time:.2f}.jpg"
+                img_path = os.path.abspath(os.path.join(output_img_dir, img_name))
+                cv2.imwrite(img_path, frame, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
+                keyframes.append({"timestamp": final_time, "image_path": img_path})
 
         cap.release()
         return keyframes

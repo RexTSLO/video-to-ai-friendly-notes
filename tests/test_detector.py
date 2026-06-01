@@ -55,8 +55,11 @@ def test_detect_slides_success(tmp_path):
         # Frame 20: White (Change!)
         # Frame 30: White (No change)
         # Frame 40: Dark (Change!)
-        frame_dark = np.zeros((100, 100, 3), dtype=np.uint8)
-        frame_white = np.ones((100, 100, 3), dtype=np.uint8) * 255
+        # Create simulated frames with rich structures to ensure standard deviation >= 5.0
+        # and avoid getting filtered out by blank frame filters.
+        np.random.seed(42)
+        frame_dark = np.random.randint(10, 40, (100, 100, 3), dtype=np.uint8)
+        frame_white = np.random.randint(210, 240, (100, 100, 3), dtype=np.uint8)
 
         # We can mock read() state using side_effect based on frame positioning
         current_frame_idx = [0]

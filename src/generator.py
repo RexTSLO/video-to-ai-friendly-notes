@@ -103,8 +103,9 @@ class PDFGenerator:
 
             # 2. Slide Image Rendering (with safety dimensions preserving aspect ratio)
             if os.path.exists(slide["image_path"]):
-                # Scale width to fit nicely within printable page borders
-                pdf.image(slide["image_path"], x=15, w=180)
+                # Scale width to fit nicely within printable page A4 borders (210 - 15 - 15 = 180)
+                # Drawing without explicit X offset allows FPDF2 to safely advance the cursor Y.
+                pdf.image(slide["image_path"], w=180)
                 pdf.ln(8)
 
             # 3. Transcriptions section header

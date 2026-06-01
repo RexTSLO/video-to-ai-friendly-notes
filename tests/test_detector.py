@@ -1,0 +1,99 @@
+import os
+from unittest.mock import patch, MagicMock
+import numpy as np
+import pytest
+
+from src.detector import SlideDetector
+
+def test_calculate_diff():
+    """Test MAE calculating logic using mock numpy array frames."""
+    detector = SlideDetector(threshold=15.0)
+
+    # 1. Identical frames should have diff == 0
+    frame_a = np.zeros((100, 100, 3), dtype=np.uint8)
+    diff_same = detector._calculate_diff(frame_a, frame_a)
+    assert diff_same == 0.0
+
+    # 2. Fully distinct frames (0 vs 255) should have max MAE of 255
+    frame_b = np.ones((100, 100, 3), dtype=np.uint8) * 255
+    diff_diff = detector._calculate_diff(frame_a, frame_b)
+    assert diff_diff == 255.0
+
+
+def test_detect_slides_failure():
+    """Test detect_slides raises ValueError if video fails to open."""
+    detector = SlideDetector()
+    with patch("cv2.VideoCapture") as mock_cap_class:
+        mock_cap_instance = MagicMock()
+        mock_cap_instance.isOpened.return_value = False
+        mock_cap_class.return_value = mock_cap_instance
+
+        with pytest.raises(ValueError) as exc_info:
+            detector.detect_slides("invalid_path.mp4", "dummy_output")
+        assert "Failed to open video" in str(exc_info.value)
+
+
+def test_detect_slides_success(tmp_path):
+    """Test successful slide change detection process with mocked video capture."""
+    detector = SlideDetector(threshold=15.0, min_slide_duration=1.0)
+    output_dir = str(tmp_path / "keyframes")
+
+    with patch("cv2.VideoCapture") as mock_cap_class, \
+         patch("cv2.imwrite") as mock_imwrite:
+
+        mock_cap_instance = MagicMock()
+        mock_cap_instance.isOpened.return_value = True
+        mock_cap_instance.get.side_effect = lambda prop: {
+            5: 10.0,    # CAP_PROP_FPS
+            7: 50       # CAP_PROP_FRAME_COUNT
+        }.get(prop, 0.0)
+        mock_cap_class.return_value = mock_cap_instance
+
+        # We will trigger cap.read() 5 times (0, 10, 20, 30, 40)
+        # Frame 0: Dark
+        # Frame 10: Dark (No change)
+        # Frame 20: White (Change!)
+        # Frame 30: White (No change)
+        # Frame 40: Dark (Change!)
+        frame_dark = np.zeros((100, 100, 3), dtype=np.uint8)
+        frame_white = np.ones((100, 100, 3), dtype=np.uint8) * 255
+
+        # We can mock read() state using side_effect based on frame positioning
+        current_frame_idx = [0]
+        
+        def mock_set(prop, val):
+            if prop == 1: # CAP_PROP_POS_FRAMES
+                current_frame_idx[0] = int(val)
+            return True
+
+        mock_cap_instance.set.side_effect = mock_set
+
+        def mock_read():
+            idx = current_frame_idx[0]
+            if idx == 0 or idx == 10:
+                return True, frame_dark
+            elif idx == 20 or idx == 30:
+                return True, frame_white
+            elif idx == 40:
+                return True, frame_dark
+            return False, None
+
+        mock_cap_instance.read.side_effect = mock_read
+        mock_imwrite.return_value = True
+
+        # Act
+        keyframes = detector.detect_slides("dummy.mp4", output_dir)
+
+        # Assert
+        # Check detected slide timestamps:
+        # - Frame 0 (0.0s): First frame ALWAYS captured.
+        # - Frame 20 (2.0s): Dark to White (transition!).
+        # - Frame 40 (4.0s): White to Dark (transition!).
+        assert len(keyframes) == 3
+        assert keyframes[0]["timestamp"] == 0.0
+        assert keyframes[1]["timestamp"] == 2.0
+        assert keyframes[2]["timestamp"] == 4.0
+
+        # Check file save counts
+        assert mock_imwrite.call_count == 3
+        mock_cap_instance.release.assert_called_once()

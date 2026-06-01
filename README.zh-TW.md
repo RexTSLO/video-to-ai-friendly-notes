@@ -4,7 +4,7 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Tests Passed](https://img.shields.io/badge/tests-13%20passed-success.svg)](#單元與整合測試)
+[![Tests Passed](https://img.shields.io/badge/tests-14%20passed-success.svg)](#單元與整合測試)
 
 `video-to-ai-friendly-notes` 是一個模組化、輕量且高效的 Python 工具。它能夠一鍵下載 YouTube 課程影片（或讀取本地影片），自動偵測投影片切換畫面，整合語音轉文字（Speech-to-Text）生成精準字幕，最終編排輸出成**對 AI / LLM / RAG 極度友善的高結構化 PDF 講義筆記**（且完美支援繁體中文）。
 
@@ -12,7 +12,7 @@
 
 ## 🚀 核心特色
 
-1.  **影格變更自動偵測 (Slide Detector)**：使用 OpenCV 進行相鄰影格的 MAE（Mean Absolute Error）差異演算。透過 1 FPS 降採樣、縮圖 `(160, 90)` 灰階優化，以極低的 CPU 開銷快速捕捉投影片切換時的關鍵畫面。
+1.  **影格變更自動偵測 (Slide Detector)**：使用 OpenCV 進行相鄰影格的 MAE（Mean Absolute Error）差異演算。透過 1 FPS 降採樣、縮圖 `(160, 90)` 灰階優化以降低 CPU 開銷。**獨家融入三大工業級最佳化設計**：防模糊切換動畫的「穩定後抓幀」機制、過濾黑屏白屏的「標準差單色過濾器」，以及自動補齊結尾內容的「尾影格自動補幀」。
 2.  **極速語音轉字幕 (Whisper Transcriber)**：直接整合 `faster-whisper` CTranslate2 推理引擎，不依賴額外的 CLI 包裝。當偵測語系為 `zh` 且無提供 initial prompt 時，**自動帶入繁體中文引導 prompt**，確保精準的繁體中文 SRT 字幕輸出。
 3.  **對 AI / RAG 極友善的 PDF 講義編排**：
     *   **繁體中文支援**：首次執行時會自動下載並註冊 `NotoSansCJKtc` 字型，徹底防止中文字元在 PDF 中變成空白方塊（Glyph Error），並具備優雅的 system font fallback 機制。
@@ -79,7 +79,7 @@ python3 -m src.main -i "path/to/lecture.mp4" -o output_notes.pdf -t 15.0
 ```
 
 > [!NOTE]  
-> 執行完畢後，除了會在指定路徑生成 `.pdf` 講義外，亦會在同目錄下自動產生同名的 `.srt` 字幕檔案供您留存參考。
+> 執行完畢後，講義與同名 `.srt` 字幕檔案預設會自動安全存放在專案的 `outputs/` 目錄中，保持根目錄的整潔。
 
 ---
 
@@ -89,7 +89,7 @@ python3 -m src.main -i "path/to/lecture.mp4" -o output_notes.pdf -t 15.0
 | :--- | :--- | :--- | :--- |
 | `-u` | `--url` | *None* | YouTube 課程影片的 URL（與 `-i` 互斥，兩者必填其一） |
 | `-i` | `--input` | *None* | 本地影片的檔案路徑（與 `-u` 互斥，兩者必填其一） |
-| `-o` | `--output` | `lecture_notes.pdf` | 生成的 PDF 講義路徑（同名 `.srt` 字幕亦會隨之輸出） |
+| `-o` | `--output` | `outputs/lecture_notes.pdf` | 生成的 PDF 講義路徑（同名 `.srt` 字幕亦會隨之輸出，若目錄不存在會自動為您建立） |
 | `-m` | `--model` | `medium` | `faster-whisper` 的模型大小（支援 `tiny`, `base`, `small`, `medium`, `large-v3`） |
 | `-l` | `--lang` | `zh` | 語音轉譯的語系代碼（預設 `zh` 會自動帶入繁體中文優化 prompt） |
 | `-t` | `--threshold`| `15.0` | 投影片切換偵測的 MAE 敏感度閾值（越低越敏感） |
@@ -123,7 +123,7 @@ video-to-ai-friendly-notes/
 
 ## 🧪 單元與整合測試
 
-本專案擁有 100% 覆蓋核心 API 的測試套件。執行測試完全不消耗外部網路流量、不讀寫真實影片，保證 CI-safe：
+本專案擁有 100% 覆蓋核心 API 的測試套件（共計 14 個測試案例）。執行測試完全不消耗外部網路流量、不讀寫真實影片，保證 CI-safe：
 
 ```bash
 PYTHONPATH=. ./venv/bin/pytest -v
@@ -132,20 +132,21 @@ PYTHONPATH=. ./venv/bin/pytest -v
 **期望輸出**：
 ```text
 tests/test_detector.py::test_calculate_diff PASSED                       [  7%]
-tests/test_detector.py::test_detect_slides_failure PASSED                [ 15%]
-tests/test_detector.py::test_detect_slides_success PASSED                [ 23%]
-tests/test_downloader.py::test_download_video PASSED                     [ 30%]
-tests/test_downloader.py::test_download_failure PASSED                   [ 38%]
-tests/test_generator.py::test_bind_subtitles_to_keyframes PASSED         [ 46%]
-tests/test_generator.py::test_pdf_generation_mocked PASSED               [ 53%]
-tests/test_integration.py::test_cli_help_flag PASSED                     [ 61%]
-tests/test_integration.py::test_orchestration_pipeline_mocked PASSED     [ 69%]
-tests/test_transcriber.py::test_transcribe_success_zh_default_prompt PASSED [ 76%]
-tests/test_transcriber.py::test_transcribe_success_custom_prompt PASSED  [ 84%]
+tests/test_detector.py::test_detect_slides_failure PASSED                [ 14%]
+tests/test_detector.py::test_detect_slides_success PASSED                [ 21%]
+tests/test_downloader.py::test_download_video PASSED                     [ 28%]
+tests/test_downloader.py::test_download_failure PASSED                   [ 35%]
+tests/test_generator.py::test_bind_subtitles_to_keyframes PASSED         [ 42%]
+tests/test_generator.py::test_pdf_generation_mocked PASSED               [ 50%]
+tests/test_integration.py::test_cli_help_flag PASSED                     [ 57%]
+tests/test_integration.py::test_orchestration_pipeline_mocked PASSED     [ 64%]
+tests/test_integration.py::test_orchestration_default_output_mocked PASSED [ 71%]
+tests/test_transcriber.py::test_transcribe_success_zh_default_prompt PASSED [ 78%]
+tests/test_transcriber.py::test_transcribe_success_custom_prompt PASSED  [ 85%]
 tests/test_transcriber.py::test_transcribe_file_not_found PASSED         [ 92%]
 tests/test_transcriber.py::test_write_srt PASSED                         [100%]
 
-============================== 13 passed in 1.66s ==============================
+============================== 14 passed in 1.95s ==============================
 ```
 
 ---

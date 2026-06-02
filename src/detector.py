@@ -172,8 +172,8 @@ class SlideDetector:
                 # Using k = 6.0 as a highly stable standard for lecture outlier detection
                 k = 6.0
                 dynamic_threshold = median + k * mad
-                # Apply boundary capping for maximum safety (min=3.0, max=25.0)
-                threshold_val = float(np.clip(dynamic_threshold, 3.0, 25.0))
+                # Apply boundary capping for maximum safety (min=1.0, max=25.0)
+                threshold_val = float(np.clip(dynamic_threshold, 1.0, 25.0))
                 print(f"[+] Calculated dynamic MAE threshold: {threshold_val:.2f} (median: {median:.2f}, mad: {mad:.2f})")
             else:
                 threshold_val = 15.0  # fallback default
@@ -215,7 +215,8 @@ class SlideDetector:
             diff = self._calculate_diff(prev_frame, frame)
             
             # 1. Check if we have a pending transition that has now stabilized (diff drops below threshold)
-            if transition_pending and diff < threshold_val:
+            # Or if it has been pending for too long (>= 2.0 seconds), force capture it to prevent blocking
+            if transition_pending and (diff < threshold_val or (current_time - pending_transition_time) >= 2.0):
                 # Ensure the stabilized frame is not a solid blank screen
                 if np.std(frame) >= 5.0:
                     img_name = f"slide_{pending_transition_time:.2f}.jpg"

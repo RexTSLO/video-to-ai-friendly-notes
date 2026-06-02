@@ -183,7 +183,7 @@ def test_consolidate_keyframes():
             assert "frame_resized_gray" not in kf
         assert mock_remove.call_count == 0
 
-    # 2. Test "final" mode (group 0, 1, 2 together -> keep 2, update timestamp to 0.0, delete 0 & 1)
+    # 2. Test "final" mode (group 0, 1, 2 together -> keep 0 & 2, delete 1)
     detector_final = SlideDetector(slide_mode="final")
     keyframes_input = [
         {"timestamp": 0.0, "image_path": "slide_0.jpg", "frame_resized_gray": frame_0},
@@ -197,18 +197,20 @@ def test_consolidate_keyframes():
         mock_exists.return_value = True
         
         result_final = detector_final.consolidate_keyframes(keyframes_input)
-        assert len(result_final) == 2
-        # Final consolidated slide inherits first frame's timestamp
+        assert len(result_final) == 3
+        # Keeps first (slide_0) and last (slide_2) of the group, and slide_3
         assert result_final[0]["timestamp"] == 0.0
-        assert result_final[0]["image_path"] == "slide_2.jpg"
-        assert result_final[1]["timestamp"] == 6.0
-        assert result_final[1]["image_path"] == "slide_3.jpg"
+        assert result_final[0]["image_path"] == "slide_0.jpg"
+        assert result_final[1]["timestamp"] == 4.0
+        assert result_final[1]["image_path"] == "slide_2.jpg"
+        assert result_final[2]["timestamp"] == 6.0
+        assert result_final[2]["image_path"] == "slide_3.jpg"
         
-        # slide_0.jpg and slide_1.jpg should be deleted
-        assert mock_remove.call_count == 2
+        # slide_1.jpg should be deleted
+        assert mock_remove.call_count == 1
         deleted_paths = [call[0][0] for call in mock_remove.call_args_list]
-        assert "slide_0.jpg" in deleted_paths
         assert "slide_1.jpg" in deleted_paths
+        assert "slide_0.jpg" not in deleted_paths
         assert "slide_2.jpg" not in deleted_paths
 
     # 3. Test "first" mode (group 0, 1, 2 together -> keep 0, timestamp remains 0.0, delete 1 & 2)

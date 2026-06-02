@@ -83,19 +83,22 @@ class SlideDetector:
                     break
 
             if self.slide_mode == "final":
-                # Only keep the last keyframe in the group
-                target_kf = group[-1].copy()
-                # Crucial step: use the FIRST frame's timestamp so subtitles sync perfectly
-                target_kf["timestamp"] = group[0]["timestamp"]
-                consolidated.append(target_kf)
+                if len(group) >= 2:
+                    # Keep both the initial (first) and completed (last) frames of the animation build sequence
+                    first_kf = group[0].copy()
+                    last_kf = group[-1].copy()
+                    consolidated.append(first_kf)
+                    consolidated.append(last_kf)
 
-                # Cleanup intermediate uncompleted slide images from disk
-                for discarded in group[:-1]:
-                    if os.path.exists(discarded["image_path"]):
-                        try:
-                            os.remove(discarded["image_path"])
-                        except Exception as e:
-                            print(f"[-] WARNING: Failed to clean up intermediate slide build: {e}")
+                    # Cleanup only the intermediate middle build JPEGs from disk
+                    for discarded in group[1:-1]:
+                        if os.path.exists(discarded["image_path"]):
+                            try:
+                                os.remove(discarded["image_path"])
+                            except Exception as e:
+                                print(f"[-] WARNING: Failed to clean up intermediate slide build: {e}")
+                else:
+                    consolidated.append(group[0].copy())
             elif self.slide_mode == "first":
                 # Only keep the first keyframe in the group
                 target_kf = group[0].copy()

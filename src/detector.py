@@ -8,11 +8,11 @@ class SlideDetector:
     based on frame difference analysis.
     """
 
-    def __init__(self, threshold: float = 15.0, min_slide_duration: float = 1.0) -> None:
+    def __init__(self, threshold: float | str = "auto", min_slide_duration: float = 1.0) -> None:
         """Initialize the SlideDetector with sensitivity thresholds and duration cooldowns.
 
         Args:
-            threshold: Mean Absolute Error threshold above which a frame is marked as a slide change.
+            threshold: Mean Absolute Error threshold above which a frame is marked as a slide change, or "auto".
             min_slide_duration: Cooldown duration in seconds between two slide transitions.
         """
         self.threshold = threshold
@@ -71,6 +71,40 @@ class SlideDetector:
         # Handle edge case where fps might be 0 or invalid
         sample_interval = int(round(fps)) if fps > 0.0 else 30
 
+        # Determine the actual threshold value to use dynamically or statically
+        if self.threshold == "auto":
+            diffs = []
+            prev_frame_profile = None
+            # Pass 1: Quick profiling of consecutive frame differences at 1 FPS
+            for frame_idx in range(0, total_frames, sample_interval):
+                cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
+                ret, frame = cap.read()
+                if not ret:
+                    break
+                # Only use frames that aren't a solid blank screen to calculate background noise
+                if np.std(frame) >= 5.0:
+                    if prev_frame_profile is not None:
+                        diff = self._calculate_diff(prev_frame_profile, frame)
+                        diffs.append(diff)
+                    prev_frame_profile = frame.copy()
+            
+            if diffs:
+                median = float(np.median(diffs))
+                mad = float(np.median(np.abs(np.array(diffs) - median)))
+                # Using k = 6.0 as a highly stable standard for lecture outlier detection
+                k = 6.0
+                dynamic_threshold = median + k * mad
+                # Apply boundary capping for maximum safety (min=3.0, max=25.0)
+                threshold_val = float(np.clip(dynamic_threshold, 3.0, 25.0))
+                print(f"[+] Calculated dynamic MAE threshold: {threshold_val:.2f} (median: {median:.2f}, mad: {mad:.2f})")
+            else:
+                threshold_val = 15.0  # fallback default
+        else:
+            try:
+                threshold_val = float(self.threshold)
+            except ValueError:
+                threshold_val = 15.0  # fallback default
+
         keyframes = []
         prev_frame = None
         last_transition_time = -self.min_slide_duration
@@ -103,7 +137,7 @@ class SlideDetector:
             diff = self._calculate_diff(prev_frame, frame)
             
             # 1. Check if we have a pending transition that has now stabilized (diff drops below threshold)
-            if transition_pending and diff < self.threshold:
+            if transition_pending and diff < threshold_val:
                 # Ensure the stabilized frame is not a solid blank screen
                 if np.std(frame) >= 5.0:
                     img_name = f"slide_{pending_transition_time:.2f}.jpg"
@@ -114,7 +148,7 @@ class SlideDetector:
                 transition_pending = False
 
             # 2. Check for new transition trigger (MAE exceeds threshold and cooldown has passed)
-            elif diff > self.threshold and (current_time - last_transition_time) >= self.min_slide_duration:
+            elif diff > threshold_val and (current_time - last_transition_time) >= self.min_slide_duration:
                 # Flag transition pending, wait for next frame to stabilize to avoid blurry animations
                 transition_pending = True
                 pending_transition_time = current_time

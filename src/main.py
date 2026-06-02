@@ -28,7 +28,7 @@ def main() -> None:
     parser.add_argument("-o", "--output", default="outputs/pdf/lecture_notes.pdf", help="Output destination PDF path.")
     parser.add_argument("-m", "--model", default="medium", help="Whisper model size (tiny, base, small, medium, large-v3).")
     parser.add_argument("-l", "--lang", default="zh", help="Language code (e.g. zh, en).")
-    parser.add_argument("-t", "--threshold", type=float, default=15.0, help="Slide change detection MAE threshold (lower = more sensitive).")
+    parser.add_argument("-t", "--threshold", default="auto", help="Slide change detection MAE threshold (float value, or 'auto' for dynamic thresholding).")
     parser.add_argument("-d", "--device", default="cpu", help="Computation device to use ('cpu' or 'cuda').")
     parser.add_argument("--subs-from-yt", default=None, help="Download specified subtitle language from YouTube directly (e.g., zh-TW), skipping Whisper.")
     parser.add_argument("--max-res", type=int, default=720, help="Maximum video resolution height to download (e.g., 480, 720, 1080).")

@@ -100,3 +100,55 @@ def test_detect_slides_success(tmp_path):
         # Check file save counts
         assert mock_imwrite.call_count == 3
         mock_cap_instance.release.assert_called_once()
+
+
+def test_detect_slides_auto_threshold(tmp_path):
+    """Test successful slide change detection process with auto thresholding."""
+    detector = SlideDetector(threshold="auto", min_slide_duration=1.0)
+    output_dir = str(tmp_path / "keyframes_auto")
+
+    with patch("cv2.VideoCapture") as mock_cap_class, \
+         patch("cv2.imwrite") as mock_imwrite:
+
+        mock_cap_instance = MagicMock()
+        mock_cap_instance.isOpened.return_value = True
+        mock_cap_instance.get.side_effect = lambda prop: {
+            5: 10.0,    # CAP_PROP_FPS
+            7: 50       # CAP_PROP_FRAME_COUNT
+        }.get(prop, 0.0)
+        mock_cap_class.return_value = mock_cap_instance
+
+        np.random.seed(42)
+        frame_dark = np.random.randint(10, 40, (100, 100, 3), dtype=np.uint8)
+        frame_white = np.random.randint(210, 240, (100, 100, 3), dtype=np.uint8)
+
+        current_frame_idx = [0]
+        
+        def mock_set(prop, val):
+            if prop == 1: # CAP_PROP_POS_FRAMES
+                current_frame_idx[0] = int(val)
+            return True
+
+        mock_cap_instance.set.side_effect = mock_set
+
+        def mock_read():
+            idx = current_frame_idx[0]
+            if idx == 0 or idx == 10:
+                return True, frame_dark
+            elif idx == 20 or idx == 30:
+                return True, frame_white
+            elif idx == 40:
+                return True, frame_dark
+            return False, None
+
+        mock_cap_instance.read.side_effect = mock_read
+        mock_imwrite.return_value = True
+
+        # Act
+        keyframes = detector.detect_slides("dummy_auto.mp4", output_dir)
+
+        # Assert
+        assert len(keyframes) > 0
+        assert mock_imwrite.call_count > 0
+        mock_cap_instance.release.assert_called_once()
+

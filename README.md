@@ -4,7 +4,7 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Tests Passed](https://img.shields.io/badge/tests-22%20passed-success.svg)](#unit--integration-testing)
+[![Tests Passed](https://img.shields.io/badge/tests-24%20passed-success.svg)](#unit--integration-testing)
 
 `video-to-ai-friendly-notes` is a modular, lightweight, and highly efficient Python command-line utility. It automates downloading lecture videos from YouTube (or processing local video files), detects slide changes, generates precise synchronized speech-to-text transcripts, and ultimately exports them into **beautifully typeset, highly structured, AI-friendly PDF study notes** (with robust out-of-the-box Traditional Chinese support).
 
@@ -93,12 +93,12 @@ python3 -m src.main -i "path/to/lecture.mp4" -o output_notes.pdf -t 15.0
 | `-o` | `--output` | `outputs/lecture_notes.pdf` | Destination path for the final PDF note (and companion `.srt` subtitles, directory will be created automatically if missing). |
 | `-m` | `--model` | `medium` | Whisper model size (`tiny`, `base`, `small`, `medium`, `large-v3`). |
 | `-l` | `--lang` | `zh` | Language code (default `zh` triggers Traditional Chinese prompt). |
-| `-t` | `--threshold`| `15.0` | OpenCV slide detection sensitivity threshold (lower = more keyframes). |
+| `-t` | `--threshold`| `auto` | OpenCV slide detection sensitivity threshold (float value, or `"auto"` to dynamically compute optimal threshold using MAD outlier statistics). |
 | `-d` | `--device` | `cpu` | Target computation inference device (`cpu` or `cuda`). |
 | *None* | `--subs-from-yt` | *None* | Directly download specified subtitle language from YouTube (e.g. `zh-TW`), bypassing local Whisper. Errors out if missing. |
 | *None* | `--max-res` | `720` | Maximum height resolution for downloaded YouTube video (e.g., `480`, `720`, `1080`) to optimize download and OpenCV performance. |
 | *None* | `--time-range` | *None* | Specific section of the video to download and process in `HH:MM:SS-HH:MM:SS` format. |
-| *None* | `--srt` | *None* | Path to a local `.srt` file to use, completely bypassing Whisper transcribing and YouTube subtitle downloading. |
+| *None* | `--srt` | *None* | Path to a local `.srt` or `.vtt` file to use, completely bypassing Whisper transcribing and YouTube subtitle downloading. |
 | *None* | `--min-duration` | `1.0` | Minimum slide duration cooldown in seconds between two slide transitions (lower = more keyframes for rapid slide changes). |
 
 
@@ -136,7 +136,7 @@ video-to-ai-friendly-notes/
 
 ## 🧪 Unit & Integration Testing
 
-The codebase includes high-fidelity unit and integration tests (total of 14 test cases). Tests run completely offline without downloading model parameters or video binaries:
+The codebase includes high-fidelity unit and integration tests (total of 24 test cases). Tests run completely offline without downloading model parameters or video binaries:
 
 ```bash
 PYTHONPATH=. ./venv/bin/pytest -v
@@ -144,22 +144,7 @@ PYTHONPATH=. ./venv/bin/pytest -v
 
 **Expected Output**:
 ```text
-tests/test_detector.py::test_calculate_diff PASSED                       [  7%]
-tests/test_detector.py::test_detect_slides_failure PASSED                [ 14%]
-tests/test_detector.py::test_detect_slides_success PASSED                [ 21%]
-tests/test_downloader.py::test_download_video PASSED                     [ 28%]
-tests/test_downloader.py::test_download_failure PASSED                   [ 35%]
-tests/test_generator.py::test_bind_subtitles_to_keyframes PASSED         [ 42%]
-tests/test_generator.py::test_pdf_generation_mocked PASSED               [ 50%]
-tests/test_integration.py::test_cli_help_flag PASSED                     [ 57%]
-tests/test_integration.py::test_orchestration_pipeline_mocked PASSED     [ 64%]
-tests/test_integration.py::test_orchestration_default_output_mocked PASSED [ 71%]
-tests/test_transcriber.py::test_transcribe_success_zh_default_prompt PASSED [ 78%]
-tests/test_transcriber.py::test_transcribe_success_custom_prompt PASSED  [ 85%]
-tests/test_transcriber.py::test_transcribe_file_not_found PASSED         [ 92%]
-tests/test_transcriber.py::test_write_srt PASSED                         [100%]
-
-============================== 14 passed in 1.95s ==============================
+============================== 24 passed in 1.94s ==============================
 ```
 
 ---

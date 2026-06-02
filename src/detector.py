@@ -8,15 +8,17 @@ class SlideDetector:
     based on frame difference analysis.
     """
 
-    def __init__(self, threshold: float | str = "auto", min_slide_duration: float = 1.0) -> None:
+    def __init__(self, threshold: float | str = "auto", min_slide_duration: float = 1.0, slide_mode: str = "final") -> None:
         """Initialize the SlideDetector with sensitivity thresholds and duration cooldowns.
 
         Args:
             threshold: Mean Absolute Error threshold above which a frame is marked as a slide change, or "auto".
             min_slide_duration: Cooldown duration in seconds between two slide transitions.
+            slide_mode: Strategy for slide animations ("final", "all", "first").
         """
         self.threshold = threshold
         self.min_slide_duration = min_slide_duration
+        self.slide_mode = slide_mode
 
     def _calculate_diff(self, frame_a: np.ndarray, frame_b: np.ndarray) -> float:
         """Calculate the Mean Absolute Error (MAE) difference between two frames.
@@ -40,6 +42,82 @@ class SlideDetector:
         # Calculate mean absolute error (MAE)
         mae = np.mean(cv2.absdiff(gray_a, gray_b))
         return float(mae)
+
+    def _get_resized_gray(self, frame: np.ndarray) -> np.ndarray:
+        """Grayscale and downscale a frame to 160x90 for fast similarity comparison."""
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        return cv2.resize(gray, (160, 90))
+
+    def consolidate_keyframes(self, keyframes: list[dict], similarity_threshold: float = 10.0) -> list[dict]:
+        """Consolidate adjacent slide builds (animations) depending on self.slide_mode.
+
+        Args:
+            keyframes: List of captured keyframe dictionaries containing "frame_resized_gray".
+            similarity_threshold: MAE boundary below which two slides are grouped as same.
+
+        Returns:
+            A cleaned and consolidated list of keyframes.
+        """
+        if not keyframes or self.slide_mode == "all":
+            # Strip temporary arrays from memory cleanly
+            for kf in keyframes:
+                kf.pop("frame_resized_gray", None)
+            return keyframes
+
+        consolidated = []
+        i = 0
+        n = len(keyframes)
+
+        while i < n:
+            group = [keyframes[i]]
+            j = i + 1
+            while j < n:
+                frame_a = group[-1]["frame_resized_gray"]
+                frame_b = keyframes[j]["frame_resized_gray"]
+                mae = np.mean(cv2.absdiff(frame_a, frame_b))
+                
+                if mae < similarity_threshold:
+                    group.append(keyframes[j])
+                    j += 1
+                else:
+                    break
+
+            if self.slide_mode == "final":
+                # Only keep the last keyframe in the group
+                target_kf = group[-1].copy()
+                # Crucial step: use the FIRST frame's timestamp so subtitles sync perfectly
+                target_kf["timestamp"] = group[0]["timestamp"]
+                consolidated.append(target_kf)
+
+                # Cleanup intermediate uncompleted slide images from disk
+                for discarded in group[:-1]:
+                    if os.path.exists(discarded["image_path"]):
+                        try:
+                            os.remove(discarded["image_path"])
+                        except Exception as e:
+                            print(f"[-] WARNING: Failed to clean up intermediate slide build: {e}")
+            elif self.slide_mode == "first":
+                # Only keep the first keyframe in the group
+                target_kf = group[0].copy()
+                consolidated.append(target_kf)
+
+                # Cleanup intermediate animation build slide images from disk
+                for discarded in group[1:]:
+                    if os.path.exists(discarded["image_path"]):
+                        try:
+                            os.remove(discarded["image_path"])
+                        except Exception as e:
+                            print(f"[-] WARNING: Failed to clean up intermediate slide build: {e}")
+            else:
+                consolidated.extend(group)
+
+            i = j
+
+        # Final strip of the temporary arrays
+        for kf in consolidated:
+            kf.pop("frame_resized_gray", None)
+
+        return consolidated
 
     def detect_slides(self, video_path: str, output_img_dir: str) -> list[dict]:
         """Detect slide transitions from a video and persist keyframes as JPEGs.
@@ -130,7 +208,7 @@ class SlideDetector:
                     img_name = "slide_0.00.jpg"
                     img_path = os.path.abspath(os.path.join(output_img_dir, img_name))
                     cv2.imwrite(img_path, frame, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
-                    keyframes.append({"timestamp": 0.0, "image_path": img_path})
+                    keyframes.append({"timestamp": 0.0, "image_path": img_path, "frame_resized_gray": self._get_resized_gray(frame)})
                     last_transition_time = 0.0
                 continue
 
@@ -143,7 +221,7 @@ class SlideDetector:
                     img_name = f"slide_{pending_transition_time:.2f}.jpg"
                     img_path = os.path.abspath(os.path.join(output_img_dir, img_name))
                     cv2.imwrite(img_path, frame, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
-                    keyframes.append({"timestamp": pending_transition_time, "image_path": img_path})
+                    keyframes.append({"timestamp": pending_transition_time, "image_path": img_path, "frame_resized_gray": self._get_resized_gray(frame)})
                     last_transition_time = pending_transition_time
                 transition_pending = False
 
@@ -161,7 +239,7 @@ class SlideDetector:
                 img_name = f"slide_{pending_transition_time:.2f}.jpg"
                 img_path = os.path.abspath(os.path.join(output_img_dir, img_name))
                 cv2.imwrite(img_path, prev_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
-                keyframes.append({"timestamp": pending_transition_time, "image_path": img_path})
+                keyframes.append({"timestamp": pending_transition_time, "image_path": img_path, "frame_resized_gray": self._get_resized_gray(prev_frame)})
                 last_transition_time = pending_transition_time
 
         # 3. Automatic tail-frame capture (Optimized Feature 3)
@@ -175,7 +253,7 @@ class SlideDetector:
                 img_name = f"slide_{final_time:.2f}.jpg"
                 img_path = os.path.abspath(os.path.join(output_img_dir, img_name))
                 cv2.imwrite(img_path, frame, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
-                keyframes.append({"timestamp": final_time, "image_path": img_path})
+                keyframes.append({"timestamp": final_time, "image_path": img_path, "frame_resized_gray": self._get_resized_gray(frame)})
 
         cap.release()
-        return keyframes
+        return self.consolidate_keyframes(keyframes)

@@ -4,7 +4,7 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Tests Passed](https://img.shields.io/badge/tests-24%20passed-success.svg)](#unit--integration-testing)
+[![Tests Passed](https://img.shields.io/badge/tests-25%20passed-success.svg)](#unit--integration-testing)
 
 `video-to-ai-friendly-notes` is a modular, lightweight, and highly efficient Python command-line utility. It automates downloading lecture videos from YouTube (or processing local video files), detects slide changes, generates precise synchronized speech-to-text transcripts, and ultimately exports them into **beautifully typeset, highly structured, AI-friendly PDF study notes** (with robust out-of-the-box Traditional Chinese support).
 
@@ -12,7 +12,7 @@
 
 ## 🚀 Core Features
 
-1.  **Slide Transition Detection (OpenCV)**: Evaluates frame difference using Mean Absolute Error (MAE) algorithms. Implements 1 FPS downsampling, frame downscaling `(160, 90)`, and grayscale conversions to keep CPU overhead low. **Integrates three industrial optimizations**: anti-ghosting "stabilized capture", standard deviation blank/solid frame filtering, and automatic tail-frame protection.
+1.  **Slide Transition Detection (OpenCV)**: Evaluates frame difference using Mean Absolute Error (MAE) algorithms. Implements 1 FPS downsampling, frame downscaling `(160, 90)`, and grayscale conversions to keep CPU overhead low. **Integrates three industrial optimizations**: anti-ghosting "stabilized capture", standard deviation blank/solid frame filtering, and automatic tail-frame protection. **Features a Slide Animation Consolidation Engine** (`--slide-mode`) to merge low-change incremental slide animations into the final slide, sync explanation subtitles, and auto-cleanup intermediate steps.
 2.  **Fast Whisper Transcription (faster-whisper)**: Integrates `faster-whisper` using CTranslate2 engine directly for fast local inference. When transcribing in Chinese (`zh`), it **automatically injects a Traditional Chinese prompt** to guide translation output without simplified character leakage.
 3.  **VLM & RAG Optimized PDF Layout**:
     *   **Chinese & CJK Glyphs Support**: Proactively downloads and caches CJK fonts (`NotoSansCJKtc`) on first launch to eliminate empty block characters (Glyph errors), while offering an elegant defensive Helvetica font fallback.
@@ -100,6 +100,7 @@ python3 -m src.main -i "path/to/lecture.mp4" -o output_notes.pdf -t 15.0
 | *None* | `--time-range` | *None* | Specific section of the video to download and process in `HH:MM:SS-HH:MM:SS` format. |
 | *None* | `--srt` | *None* | Path to a local `.srt` or `.vtt` file to use, completely bypassing Whisper transcribing and YouTube subtitle downloading. |
 | *None* | `--min-duration` | `1.0` | Minimum slide duration cooldown in seconds between two slide transitions (lower = more keyframes for rapid slide changes). |
+| *None* | `--slide-mode` | `final` | Slide animation capture strategy (`final` to keep only the completed slide, `all` to capture all stages, `first` to keep only the initial state). |
 
 
 
@@ -136,7 +137,7 @@ video-to-ai-friendly-notes/
 
 ## 🧪 Unit & Integration Testing
 
-The codebase includes high-fidelity unit and integration tests (total of 24 test cases). Tests run completely offline without downloading model parameters or video binaries:
+The codebase includes high-fidelity unit and integration tests (total of 25 test cases). Tests run completely offline without downloading model parameters or video binaries:
 
 ```bash
 PYTHONPATH=. ./venv/bin/pytest -v
@@ -144,7 +145,7 @@ PYTHONPATH=. ./venv/bin/pytest -v
 
 **Expected Output**:
 ```text
-============================== 24 passed in 1.94s ==============================
+============================== 25 passed in 1.94s ==============================
 ```
 
 ---

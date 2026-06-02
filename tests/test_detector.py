@@ -152,3 +152,89 @@ def test_detect_slides_auto_threshold(tmp_path):
         assert mock_imwrite.call_count > 0
         mock_cap_instance.release.assert_called_once()
 
+
+def test_consolidate_keyframes():
+    """Test consolidate_keyframes method for first, final, and all modes."""
+    # Create dark frame and slightly modified dark frames, and a white frame
+    np.random.seed(42)
+    # Use 160x90 frames as expected by consolidate_keyframes
+    frame_0 = np.zeros((90, 160), dtype=np.uint8)
+    frame_1 = np.ones((90, 160), dtype=np.uint8) * 2  # MAE difference = 2.0 (< 10.0)
+    frame_2 = np.ones((90, 160), dtype=np.uint8) * 4  # MAE difference from frame_1 = 2.0 (< 10.0)
+    frame_3 = np.ones((90, 160), dtype=np.uint8) * 255  # MAE difference = 251.0 (>= 10.0)
+
+    # 1. Test "all" mode (should keep everything, pop temporary key, no deletion)
+    detector_all = SlideDetector(slide_mode="all")
+    keyframes_input = [
+        {"timestamp": 0.0, "image_path": "slide_0.jpg", "frame_resized_gray": frame_0},
+        {"timestamp": 2.0, "image_path": "slide_1.jpg", "frame_resized_gray": frame_1},
+        {"timestamp": 4.0, "image_path": "slide_2.jpg", "frame_resized_gray": frame_2},
+        {"timestamp": 6.0, "image_path": "slide_3.jpg", "frame_resized_gray": frame_3},
+    ]
+    
+    with patch("os.path.exists") as mock_exists, \
+         patch("os.remove") as mock_remove:
+        mock_exists.return_value = True
+        
+        result_all = detector_all.consolidate_keyframes(keyframes_input)
+        assert len(result_all) == 4
+        # frame_resized_gray should be removed from all keyframes
+        for kf in result_all:
+            assert "frame_resized_gray" not in kf
+        assert mock_remove.call_count == 0
+
+    # 2. Test "final" mode (group 0, 1, 2 together -> keep 2, update timestamp to 0.0, delete 0 & 1)
+    detector_final = SlideDetector(slide_mode="final")
+    keyframes_input = [
+        {"timestamp": 0.0, "image_path": "slide_0.jpg", "frame_resized_gray": frame_0},
+        {"timestamp": 2.0, "image_path": "slide_1.jpg", "frame_resized_gray": frame_1},
+        {"timestamp": 4.0, "image_path": "slide_2.jpg", "frame_resized_gray": frame_2},
+        {"timestamp": 6.0, "image_path": "slide_3.jpg", "frame_resized_gray": frame_3},
+    ]
+    
+    with patch("os.path.exists") as mock_exists, \
+         patch("os.remove") as mock_remove:
+        mock_exists.return_value = True
+        
+        result_final = detector_final.consolidate_keyframes(keyframes_input)
+        assert len(result_final) == 2
+        # Final consolidated slide inherits first frame's timestamp
+        assert result_final[0]["timestamp"] == 0.0
+        assert result_final[0]["image_path"] == "slide_2.jpg"
+        assert result_final[1]["timestamp"] == 6.0
+        assert result_final[1]["image_path"] == "slide_3.jpg"
+        
+        # slide_0.jpg and slide_1.jpg should be deleted
+        assert mock_remove.call_count == 2
+        deleted_paths = [call[0][0] for call in mock_remove.call_args_list]
+        assert "slide_0.jpg" in deleted_paths
+        assert "slide_1.jpg" in deleted_paths
+        assert "slide_2.jpg" not in deleted_paths
+
+    # 3. Test "first" mode (group 0, 1, 2 together -> keep 0, timestamp remains 0.0, delete 1 & 2)
+    detector_first = SlideDetector(slide_mode="first")
+    keyframes_input = [
+        {"timestamp": 0.0, "image_path": "slide_0.jpg", "frame_resized_gray": frame_0},
+        {"timestamp": 2.0, "image_path": "slide_1.jpg", "frame_resized_gray": frame_1},
+        {"timestamp": 4.0, "image_path": "slide_2.jpg", "frame_resized_gray": frame_2},
+        {"timestamp": 6.0, "image_path": "slide_3.jpg", "frame_resized_gray": frame_3},
+    ]
+    
+    with patch("os.path.exists") as mock_exists, \
+         patch("os.remove") as mock_remove:
+        mock_exists.return_value = True
+        
+        result_first = detector_first.consolidate_keyframes(keyframes_input)
+        assert len(result_first) == 2
+        assert result_first[0]["timestamp"] == 0.0
+        assert result_first[0]["image_path"] == "slide_0.jpg"
+        assert result_first[1]["timestamp"] == 6.0
+        assert result_first[1]["image_path"] == "slide_3.jpg"
+        
+        # slide_1.jpg and slide_2.jpg should be deleted
+        assert mock_remove.call_count == 2
+        deleted_paths = [call[0][0] for call in mock_remove.call_args_list]
+        assert "slide_1.jpg" in deleted_paths
+        assert "slide_2.jpg" in deleted_paths
+        assert "slide_0.jpg" not in deleted_paths
+

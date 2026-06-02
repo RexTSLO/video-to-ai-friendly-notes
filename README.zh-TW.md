@@ -4,7 +4,7 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Tests Passed](https://img.shields.io/badge/tests-24%20passed-success.svg)](#單元與整合測試)
+[![Tests Passed](https://img.shields.io/badge/tests-25%20passed-success.svg)](#單元與整合測試)
 
 `video-to-ai-friendly-notes` 是一個模組化、輕量且高效的 Python 工具。它能夠一鍵下載 YouTube 課程影片（或讀取本地影片），自動偵測投影片切換畫面，整合語音轉文字（Speech-to-Text）生成精準字幕，最終編排輸出成**對 AI / LLM / RAG 極度友善的高結構化 PDF 講義筆記**（且完美支援繁體中文）。
 
@@ -12,7 +12,7 @@
 
 ## 🚀 核心特色
 
-1.  **影格變更自動偵測 (Slide Detector)**：使用 OpenCV 進行相鄰影格的 MAE（Mean Absolute Error）差異演算。透過 1 FPS 降採樣、縮圖 `(160, 90)` 灰階優化以降低 CPU 開銷。**獨家融入三大工業級最佳化設計**：防模糊切換動畫的「穩定後抓幀」機制、過濾黑屏白屏的「標準差單色過濾器」，以及自動補齊結尾內容的「尾影格自動補幀」。
+1.  **影格變更自動偵測 (Slide Detector)**：使用 OpenCV 進行相鄰影格的 MAE（Mean Absolute Error）差異演算。透過 1 FPS 降採樣、縮圖 `(160, 90)` 灰階優化以降低 CPU 開銷。**獨家融入三大工業級最佳化設計**：防模糊切換動畫的「穩定後抓幀」機制、過濾黑屏白屏的「標準差單色過濾器」，以及自動補齊結尾內容的「尾影格自動補幀」。**新增投影片動畫整合引擎** (`--slide-mode`)：自動將低變動的建構式動畫（Build-up Animations）影格合併為最終完成版投影片，完美銜接各動畫階段的演講字幕，並自動清理磁碟上未完成的過渡影格。
 2.  **極速語音轉字幕 (Whisper Transcriber)**：直接整合 `faster-whisper` CTranslate2 推理引擎，不依賴額外的 CLI 包裝。當偵測語系為 `zh` 且無提供 initial prompt 時，**自動帶入繁體中文引導 prompt**，確保精準的繁體中文 SRT 字幕輸出。
 3.  **對 AI / RAG 極友善的 PDF 講義編排**：
     *   **繁體中文支援**：首次執行時會自動下載並註冊 `NotoSansCJKtc` 字型，徹底防止中文字元在 PDF 中變成空白方塊（Glyph Error），並具備優雅的 system font fallback 機制。
@@ -100,6 +100,7 @@ python3 -m src.main -i "path/to/lecture.mp4" -o output_notes.pdf -t 15.0
 | *無* | `--time-range` | *None* | 指定要下載與處理的影片時間區段，格式為 `HH:MM:SS-HH:MM:SS`（例如 `00:10:00-00:20:30`）。 |
 | *無* | `--srt` | *None* | 指定本地 `.srt` 或 `.vtt` 字幕檔案路徑，完全跳過 Whisper 語音轉譯與 YouTube 字幕下載流程。 |
 | *無* | `--min-duration` | `1.0` | 兩次投影片切換之間的最小冷卻秒數（越低越能捕捉快速切換的投影片）。 |
+| *無* | `--slide-mode` | `final` | 投影片動畫擷取策略（`final` 只保留最終動畫完成版、`all` 擷取所有步驟、`first` 只保留初始無動畫版） |
 
 
 
@@ -136,7 +137,7 @@ video-to-ai-friendly-notes/
 
 ## 🧪 單元與整合測試
 
-本專案擁有 100% 覆蓋核心 API 的測試套件（共計 24 個測試案例）。執行測試完全不消耗外部網路流量、不讀寫真實影片，保證 CI-safe：
+本專案擁有 100% 覆蓋核心 API 的測試套件（共計 25 個測試案例）。執行測試完全不消耗外部網路流量、不讀寫真實影片，保證 CI-safe：
 
 ```bash
 PYTHONPATH=. ./venv/bin/pytest -v
@@ -144,7 +145,7 @@ PYTHONPATH=. ./venv/bin/pytest -v
 
 **期望輸出**：
 ```text
-============================== 24 passed in 1.94s ==============================
+============================== 25 passed in 1.94s ==============================
 ```
 
 ---

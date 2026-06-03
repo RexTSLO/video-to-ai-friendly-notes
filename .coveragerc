@@ -1,0 +1,14 @@
+[run]
+source = src
+omit = 
+    */tests/*
+    */test_*.py
+    */__pycache__/*
+    */venv/*
+    */site-packages/*
+    **/_*.py
+
+[report]
+precision = 2
+show_missing = True
+skip_covered = False

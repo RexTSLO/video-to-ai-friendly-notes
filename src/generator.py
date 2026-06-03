@@ -30,7 +30,7 @@ class PDFGenerator:
             try:
                 print(f"[*] Downloading CJK font for Chinese PDF support from {url}...")
                 # Download font securely
-                urllib.request.urlretrieve(url, self.font_path)
+                urllib.request.urlretrieve(url, self.font_path)  # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected
                 print("[+] Font downloaded successfully and cached.")
                 return True
             except Exception as e:

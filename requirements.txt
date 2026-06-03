@@ -6,3 +6,6 @@ numpy>=1.24.0
 pytest>=7.4.0
 pytest-cov>=4.1.0
 
+# Security scanning
+semgrep>=1.76.0
+pip-audit>=2.7.3

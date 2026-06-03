@@ -45,6 +45,16 @@ test:
 test-cov:
 	PYTHONPATH=. ./venv/bin/pytest --cov=src tests/ -v --cov-report=term-missing --cov-fail-under=95
 
+security-scan:
+	@echo "Running semgrep security scan..."
+	@./venv/bin/semgrep scan --config auto || exit 1
+	@echo ""
+	@echo "Running pip-audit dependency check..."
+	@IGNORE_ARGS=$$(if [ -f .audit-ignore ]; then grep -v '^#' .audit-ignore | grep -v '^$$' | awk '{print "--ignore-vuln " $$1}' | tr '\n' ' '; fi); \
+	./venv/bin/pip-audit $$IGNORE_ARGS -r requirements.txt || exit 1
+	@echo ""
+	@echo "Security scan completed successfully."
+
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true

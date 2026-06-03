@@ -10,16 +10,17 @@
 
 ---
 
-## 🚀 核心功能
+## 🚀 核心特色
 
 1. **投影片畫面自動擷取 (Slide Detector)**：自動偵測並擷取投影片切換的關鍵影格，過濾切換過程中的模糊動畫與黑白屏。特別支援**動畫整合模式** (`--slide-mode`)，能將逐步疊加（Build-up）的投影片動畫合併為最終完成版，既保留完整簡報內容，又不會產生多餘的重複頁面。
-2. **極速語音轉字幕 (Whisper Transcriber)**：直接整合 `faster-whisper` CTranslate2 推理引擎，不依賴額外的 CLI 包裝。
+2. **語音轉字幕 (Whisper Transcriber)**：直接整合 `faster-whisper` CTranslate2 推理引擎，不依賴額外的 CLI 包裝。
 3. **對齊的圖文講義排版 (AI & Human Friendly Layout)**：
    * **繁體中文支援**：首次執行時會自動下載並註冊中文字型，徹底防止中文字元在 PDF 中變成空白方塊（豆腐字）。
    * **高結構化排版**：每頁講義皆將「投影片關鍵影格」與「該時間區段的口述逐字稿」排版在同一個視覺區塊中，方便快速對照。
 4. **針對 AI 與 RAG 讀取優化 (AI-Ready)**：
-   * 產出的 PDF 講義以每張投影片為單位（`Slide X [MM:SS]`）進行分頁與排版。這對 AI 來說是「知識分塊 (Semantic Chunking)」，讓 NotebookLM 等大模型在解讀或檢索時，能夠定位到具體的時間戳記與投影片頁碼，提高回答準確度並減少 Token 消耗。
-5. **目錄分流 (Smart Output Dispatcher)**：Youtube下載影片會存放於 `inputs/` 目錄下；所有產出則會自動分門別類存放於 `outputs/` 目錄下（PDF 講義存放於 `pdf/`、字幕存放於 `subtitles/`、投影片圖檔則歸類於 `slides/`）。
+   * **多模態語意對齊 (Multimodal Alignment)**：將「關鍵投影片影格」與「對應時間的口述逐字稿」對齊排版，讓 NotebookLM 或多模態 RAG 系統能同時讀取圖表與文字，捕捉深層脈絡（避免只餵文字而遺漏投影片圖表或程式碼的痛點）。
+   * **分頁與主題錨點 (Semantic Chunking)**：以每張投影片為單位進行分頁與排版。這對 AI 來說是天然的語意分塊，能有效防止長篇逐字稿檢索時的「語意飄移 (Context Drift)」，並讓 AI 能給出精確的時間戳記與頁碼參考來源。
+   * **高 Token 密度與低成本 (Token & Cost Efficiency)**：自動過濾轉場動畫與重複影格，只保留精煉後的投影片圖像與去蕪存菁的字幕，大幅節省 AI 的 Input Token 消耗，提升檢索速度並降低成本。
 
 
 ---
@@ -31,12 +32,21 @@
 ### 1. 載入手動建立的 YouTube 官方字幕 (YT Manual Subtitles)
 針對長時間影片（例如 1 小時以上的演講或課程），直接使用 `--subs-from-yt zh-TW` 下載手動校對的官方繁體中文字幕。**跳過本地 AI 轉譯時間**，生成具備高結構化排版與時間軸對齊的 PDF 筆記。
 *   **適合影片類型**：有官方精心翻譯/校對字幕的長時間學術演講、大型開發者大會（如 Google I/O、WWDC）、Coursera 或 edX 等線上課程影片。
-*   **示範影片**：<!-- [請在此填入 YouTube 影片連結或名稱] -->
-*   **產出 PDF**：<!-- [請在此填入 PDF 檔案下載連結] -->
+*   **示範影片**：[Harness Engineering：有時候語言模型不是不夠聰明，只是沒有人類好好引導](https://www.youtube.com/watch?v=R6fZR_9kmIw)
+*   **產出 PDF**：[v0.1.0_assets_1.pdf](https://github.com/RexTSLO/video-to-ai-friendly-notes/releases/download/v0.1.0/v0.1.0_assets_1.pdf)
 *   **效果展示**：
     | 原始影片畫面 | 產出之完成版投影片與字幕對齊 |
     | :---: | :---: |
-    | ![原始影片截圖](<!-- [請在此填入原始影片截圖路徑] -->) | ![產出 PDF 頁面](<!-- [請在此填入 PDF 預覽圖片路徑] -->) |
+    | ![原始影片截圖](https://github.com/user-attachments/assets/f3982f21-2192-4e56-95d1-73eb7e4e6dcd) | ![產出 PDF 頁面](https://github.com/user-attachments/assets/9f308811-4f78-43b9-8d65-d49bae24a736) |
+#### 📊 NotebookLM 實際回答效果對比
+
+| ❌ 僅輸入 YouTube 連結/純逐字稿（AI 無法看見畫面，回答籠統） |
+| :---: |
+| ![NotebookLM 純文字限制](https://github.com/user-attachments/assets/ea9d5615-1dbb-46ef-a576-ad54496ab66d) |
+
+| 🚀 輸入本專案產出的 PDF 講義（多模態對齊，回答精確） |
+| :---: |
+| ![NotebookLM 多模態精確回答](https://github.com/user-attachments/assets/350efa77-858f-422c-ac41-3a33d860eecb) |
 
 ### 2. 載入 YouTube 自動生成的字幕 (YT Auto-generated Subtitles)
 針對沒有提供手動校對字幕、僅有 YouTube 系統語音識別自動生成字幕的影片。本工具可直接無縫下載並解析其自動生成字幕（支援自動翻譯/自動轉譯語系），產出講義。
@@ -57,24 +67,6 @@
     | 原始影片畫面 | 產出之完成版投影片與字幕對齊 |
     | :---: | :---: |
     | ![原始影片截圖](<!-- [請在此填入原始影片截圖路徑] -->) | ![產出 PDF 頁面](<!-- [請在此填入 PDF 預覽圖片路徑] -->) |
-
----
-
-## 💡 為什麼本專案生成的 PDF 比影片/純文字更適合匯入 NotebookLM？
-
-當您將學習資源匯入 Google NotebookLM 或其他 RAG/LLM 知識庫時，直接貼上 YouTube 連結或純逐字稿往往效果有限。本專案產出的 PDF 講義具備以下核心優勢，能提升 AI 的回答品質：
-
-1. **多模態語意對齊 (Multimodal Alignment)**
-   * **問題**：只餵給 AI 純文字字幕時，AI 無法得知「投影片上的架構圖」、「程式碼截圖」或「數據圖表」長怎樣；而直接給影片時，AI 難以定位影像與講者口述的對應關係。
-   * **解決方案**：本專案產出的 PDF 將「關鍵投影片影格」與「該時間區段的口述字幕」排版在同一個視覺區塊中。不論是支援多模態的 NotebookLM，或是其他多模態 RAG 系統，都能同時讀取圖表與文字，理解更深層的脈絡。
-
-2. **分頁與主題錨點 (Structured Segmentation)**
-   * **問題**：長篇的口講逐字稿通常沒有段落，AI 在進行向量檢索（Retrieval）時，容易把前後無關的段落混淆在一起（Context Drift），導致回答張冠李戴。
-   * **解決方案**：PDF 講義以每張投影片為單位（`Slide X [MM:SS]`）進行分頁與排版。這對 AI 來說是「語意分塊（Chunking）」，確保 AI 能給出帶有時間戳記與頁碼的參考來源。
-
-3. **過濾無效資訊，提升 Token 密度 (Token & Cost Efficiency)**
-   * **問題**：若直接將整段影片餵給多模態大模型，會消耗極大量的 Input Token，且影片中多數時間投影片是靜止的，產生大量重複影格與無效的語音贅詞。
-   * **解決方案**：自動過濾轉場動畫與重複影格，只保留精煉後的投影片圖像與去蕪存菁的字幕，大幅節省 AI 處理的 Token 消耗，提高檢索速度。
 
 ---
 
@@ -140,7 +132,7 @@ python3 -m src.main -i "path/to/lecture.mp4" -o output_notes.pdf -m medium -l zh
 
 > [!NOTE]  
 > 執行完畢後，講義與同名 `.srt` 字幕檔案預設會自動安全存放在專案的 `outputs/` 目錄中，保持根目錄的整潔。
-
+> **目錄分流 (Smart Output Dispatcher)**：執行完畢後，Youtube下載影片會存放於 `inputs/` 目錄下；講義與同名 `.srt` 字幕檔案預設會自動分門別類地存放在專案的 `outputs/` 目錄下（PDF 講義存放於 `pdf/`、字幕存放於 `subtitles/`、投影片圖檔則歸類於 `slides/`）。
 ---
 
 ## 🎛️ CLI 參數說明

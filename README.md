@@ -204,3 +204,11 @@ PYTHONPATH=. ./venv/bin/pytest -v
 ## 📄 License
 
 Distributed under the MIT License. See [LICENSE](LICENSE) for details.
+
+---
+
+## ⚖️ Disclaimer
+
+* **Purpose**: This project is intended solely for educational, academic research, and technical exchange purposes.
+* **Copyright Compliance**: When downloading/transcribing videos and compiling notes, users are solely responsible for ensuring compliance with local copyright laws. Generated PDF notes must not be used for commercial reproduction, public redistribution, or any other activities infringing upon the intellectual property of original content creators.
+* **Third-Party Terms**: This utility uses `yt-dlp` to retrieve public YouTube assets. Users assume all responsibility for any account restrictions resulting from violations of YouTube's Terms of Service. The project authors assume no liability for user activities.

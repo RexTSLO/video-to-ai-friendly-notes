@@ -6,9 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Tests Passed](https://img.shields.io/badge/tests-25%20passed-success.svg)](#unit--integration-testing)
 
-Have you ever spent hours scrubbing through a 2-hour lecture or technical presentation video just to find a key slide? Or tried feeding messy raw speech transcripts to an AI, only to get vague, hallucinated answers because it lacked visual context like diagrams and code blocks?
-
-`video-to-ai-friendly-notes` is an automated tool designed to solve this exact problem. Simply provide a YouTube URL or a local video file, and it will automatically **download the video, extract slide frames, transcribe the speech, and align them perfectly**. The result is a **highly structured PDF study guide optimized for both human reading and ingestion by AI/RAG systems (such as Google NotebookLM)**—saving you time and supercharging your AI's accuracy.
+`video-to-ai-friendly-notes` is a modular, lightweight, and efficient Python tool. Simply provide a YouTube URL or a local video file, and it will automatically **download the video, accurately extract slide frames, transcribe the speech, and align them perfectly**. The result is a **highly structured PDF study guide optimized for both human reading and AI/RAG (such as Google NotebookLM) ingestion**.
 
 ---
 

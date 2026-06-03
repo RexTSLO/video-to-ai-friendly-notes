@@ -57,6 +57,11 @@ def main() -> None:
 
     args = parser.parse_args()
 
+    # Clean up shell-escaping backslashes in YouTube URL if provided
+    if args.url:
+        import re
+        args.url = re.sub(r'\\(.)', r'\1', args.url.strip("'\""))
+
     # Basic validation & foolproofing for --list-subs mode
     if args.list_subs:
         if not args.url:

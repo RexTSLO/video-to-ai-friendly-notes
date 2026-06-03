@@ -545,5 +545,24 @@ def test_cli_list_subs_failure():
     assert exc_info.value.code == 1
 
 
+def test_cli_url_unescaping():
+    """Test that URLs with shell escape characters are automatically unescaped."""
+    test_args = [
+        "src.main",
+        "--url", r"https://www.youtube.com/watch\?v\=mocked\&list\=abc",
+        "--list-subs"
+    ]
+    
+    with patch("sys.argv", test_args), \
+         patch("src.downloader.VideoDownloader.list_subtitles") as mock_list_subs, \
+         pytest.raises(SystemExit):
+        
+        mock_list_subs.return_value = {"manual": {}, "auto": {}}
+        main()
+        
+    mock_list_subs.assert_called_once_with("https://www.youtube.com/watch?v=mocked&list=abc")
+
+
+
 
 

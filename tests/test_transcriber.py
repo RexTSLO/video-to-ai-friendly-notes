@@ -165,3 +165,21 @@ def test_parse_vtt(tmp_path):
     assert segments[0] == {"start": 0.0, "end": 2.5, "text": "Hello World"}
     assert segments[1] == {"start": 3.125, "end": 5.002, "text": "Welcome to VTT parsing"}
 
+
+def test_parse_srt_various_time_formats(tmp_path):
+    """Test parsing SRT/VTT with non-standard timing formats (MM:SS and SS)."""
+    vtt_content = (
+        "WEBVTT\n\n"
+        "02:30.500 --> 05.125\n"
+        "Hello World\n\n"
+        "--> \n"
+        "Empty test\n\n"
+    )
+    vtt_file = tmp_path / "test_formats.vtt"
+    vtt_file.write_text(vtt_content, encoding="utf-8")
+
+    segments = SubtitleTranscriber.parse_srt(str(vtt_file))
+    assert len(segments) >= 1
+    assert segments[0]["start"] == 150.5
+    assert segments[0]["end"] == 5.125
+

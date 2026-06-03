@@ -43,7 +43,7 @@ test:
 	PYTHONPATH=. ./venv/bin/pytest tests/ -v
 
 test-cov:
-	PYTHONPATH=. ./venv/bin/pytest --cov=src tests/ -v --cov-report=term-missing
+	PYTHONPATH=. ./venv/bin/pytest --cov=src tests/ -v --cov-report=term-missing --cov-fail-under=95
 
 
 clean:

@@ -240,3 +240,110 @@ def test_consolidate_keyframes():
         assert "slide_2.jpg" in deleted_paths
         assert "slide_0.jpg" not in deleted_paths
 
+
+def test_consolidate_keyframes_cleanup_exception():
+    """Test exception handling during file removal in consolidate_keyframes."""
+    np.random.seed(42)
+    frame_0 = np.zeros((90, 160), dtype=np.uint8)
+    frame_1 = np.ones((90, 160), dtype=np.uint8) * 2
+
+    # 1. final mode with Exception on os.remove
+    detector_final = SlideDetector(slide_mode="final")
+    keyframes_final = [
+        {"timestamp": 0.0, "image_path": "slide_0.jpg", "frame_resized_gray": frame_0},
+        {"timestamp": 2.0, "image_path": "slide_1.jpg", "frame_resized_gray": frame_1},
+        {"timestamp": 4.0, "image_path": "slide_2.jpg", "frame_resized_gray": frame_0},
+    ]
+    with patch("os.path.exists", return_value=True), \
+         patch("os.remove", side_effect=Exception("Permission denied")) as mock_remove:
+        res = detector_final.consolidate_keyframes(keyframes_final)
+        # Should not crash and proceed normally
+        assert len(res) == 2
+        mock_remove.assert_called_once()
+
+    # 2. first mode with Exception on os.remove
+    detector_first = SlideDetector(slide_mode="first")
+    keyframes_first = [
+        {"timestamp": 0.0, "image_path": "slide_0.jpg", "frame_resized_gray": frame_0},
+        {"timestamp": 2.0, "image_path": "slide_1.jpg", "frame_resized_gray": frame_1},
+    ]
+    with patch("os.path.exists", return_value=True), \
+         patch("os.remove", side_effect=Exception("Permission denied")) as mock_remove:
+        res = detector_first.consolidate_keyframes(keyframes_first)
+        assert len(res) == 1
+        mock_remove.assert_called_once()
+
+    # 3. slide_mode is "other" (line 115)
+    detector_other = SlideDetector(slide_mode="other")
+    keyframes_other = [
+        {"timestamp": 0.0, "image_path": "slide_0.jpg", "frame_resized_gray": frame_0},
+        {"timestamp": 2.0, "image_path": "slide_1.jpg", "frame_resized_gray": frame_1},
+    ]
+    res = detector_other.consolidate_keyframes(keyframes_other)
+    assert len(res) == 2
+
+
+def test_detect_slides_edge_cases(tmp_path):
+    """Test edge cases in detect_slides: invalid threshold string, empty diffs profile, read failures, and final frame capture."""
+    output_dir = str(tmp_path / "keyframes_edge")
+
+    # 1. Invalid threshold string (should fall back to 15.0)
+    detector_invalid_thresh = SlideDetector(threshold="invalid_val", min_slide_duration=1.0)
+    with patch("cv2.VideoCapture") as mock_cap_class:
+        mock_cap_instance = MagicMock()
+        mock_cap_instance.isOpened.return_value = True
+        mock_cap_instance.get.side_effect = lambda prop: {5: 10.0, 7: 10}.get(prop, 0.0)
+        mock_cap_class.return_value = mock_cap_instance
+        mock_cap_instance.read.return_value = (False, None)
+        
+        keyframes = detector_invalid_thresh.detect_slides("dummy.mp4", output_dir)
+        assert keyframes == []
+
+    # 2. Auto threshold with empty diffs profile (all frames blank, should fall back to 15.0)
+    detector_auto_empty = SlideDetector(threshold="auto", min_slide_duration=1.0)
+    with patch("cv2.VideoCapture") as mock_cap_class:
+        mock_cap_instance = MagicMock()
+        mock_cap_instance.isOpened.return_value = True
+        mock_cap_instance.get.side_effect = lambda prop: {5: 10.0, 7: 20}.get(prop, 0.0)
+        mock_cap_class.return_value = mock_cap_instance
+        blank_frame = np.zeros((100, 100, 3), dtype=np.uint8)
+        mock_cap_instance.read.return_value = (True, blank_frame)
+        
+        keyframes = detector_auto_empty.detect_slides("dummy.mp4", output_dir)
+        assert keyframes == []
+
+    # 3. Tail-frame capture (last frame is distant enough and valid)
+    detector_tail = SlideDetector(threshold=15.0, min_slide_duration=1.0)
+    with patch("cv2.VideoCapture") as mock_cap_class, \
+         patch("cv2.imwrite") as mock_imwrite:
+        mock_cap_instance = MagicMock()
+        mock_cap_instance.isOpened.return_value = True
+        mock_cap_instance.get.side_effect = lambda prop: {
+            5: 10.0,    # CAP_PROP_FPS
+            7: 30       # CAP_PROP_FRAME_COUNT (total 3s)
+        }.get(prop, 0.0)
+        mock_cap_class.return_value = mock_cap_instance
+        mock_imwrite.return_value = True
+
+        np.random.seed(42)
+        frame_valid = np.random.randint(10, 40, (100, 100, 3), dtype=np.uint8)
+
+        current_frame_idx = [0]
+        def mock_set(prop, val):
+            if prop == 1:
+                current_frame_idx[0] = int(val)
+            return True
+        mock_cap_instance.set.side_effect = mock_set
+
+        def mock_read():
+            idx = current_frame_idx[0]
+            if idx in (0, 10, 20, 29):
+                return True, frame_valid
+            return False, None
+        mock_cap_instance.read.side_effect = mock_read
+
+        keyframes = detector_tail.detect_slides("dummy.mp4", output_dir)
+        assert len(keyframes) == 2
+        assert keyframes[0]["timestamp"] == 0.0
+        assert abs(keyframes[1]["timestamp"] - 2.9) < 1e-5
+

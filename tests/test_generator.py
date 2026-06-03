@@ -84,3 +84,63 @@ def test_pdf_generation_mocked(tmp_path):
         
         # 4. output was persisted successfully
         mock_fpdf_instance.output.assert_called_once_with(output_pdf)
+
+
+def test_pdf_generation_font_download_failure(tmp_path):
+    """Test generating PDF when font download fails, ensuring fallback to standard Latin fonts."""
+    font_dir = str(tmp_path / "failed_fonts")
+    generator = PDFGenerator(font_dir=font_dir)
+
+    keyframes = [
+        {"timestamp": 0.0, "image_path": str(tmp_path / "slide_0.jpg")}
+    ]
+    subtitles = [
+        {"start": 1.0, "end": 3.0, "text": "Slide 0 subtitle"}
+    ]
+
+    with open(keyframes[0]["image_path"], "w") as f:
+        f.write("dummy image")
+
+    output_pdf = str(tmp_path / "notes_fallback.pdf")
+
+    with patch("urllib.request.urlretrieve") as mock_download, \
+         patch("src.generator.FPDF") as mock_fpdf_class:
+        
+        # Simulate download exception
+        mock_download.side_effect = Exception("Network timeout")
+
+        mock_fpdf_instance = MagicMock()
+        mock_fpdf_class.return_value = mock_fpdf_instance
+
+        # Act
+        generator.generate(keyframes, subtitles, output_pdf)
+
+        # Assert
+        mock_download.assert_called_once()
+        mock_fpdf_class.assert_called_once()
+        
+        # Check that add_font was NOT called (since font download failed)
+        mock_fpdf_instance.add_font.assert_not_called()
+        
+        # Check that it fell back to "Helvetica" for the font family, by checking set_font calls
+        # The font family used should be "Helvetica"
+        called_args, _ = mock_fpdf_instance.set_font.call_args
+        assert called_args[0] == "Helvetica"
+
+        # Check output was persisted
+        mock_fpdf_instance.output.assert_called_once_with(output_pdf)
+
+
+def test_ensure_font_exists_already_present(tmp_path):
+    """Test that _ensure_font_exists returns True directly if the font file already exists."""
+    font_dir = str(tmp_path / "existing_fonts")
+    generator = PDFGenerator(font_dir=font_dir)
+    
+    # Create the font file so it exists
+    os.makedirs(font_dir, exist_ok=True)
+    with open(generator.font_path, "w") as f:
+        f.write("mock font data")
+
+    with patch("urllib.request.urlretrieve") as mock_download:
+        assert generator._ensure_font_exists() is True
+        mock_download.assert_not_called()

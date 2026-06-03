@@ -152,3 +152,226 @@ def test_list_subtitles_failure():
             
         assert "Failed to retrieve subtitles list" in str(exc_info.value)
 
+
+def test_download_time_ranges_formats(tmp_path):
+    """Test valid time range formats of length 2 and 1."""
+    output_dir = str(tmp_path / "time_ranges_formats")
+    test_url = "https://www.youtube.com/watch?v=aqz-KE-bpKQ"
+    os.makedirs(output_dir, exist_ok=True)
+
+    # 1. format MM:SS
+    downloader = VideoDownloader(output_dir=output_dir, time_range="05:30-10:15")
+    with patch("yt_dlp.YoutubeDL") as mock_ydl_class:
+        mock_ydl_instance = MagicMock()
+        mock_ydl_class.return_value.__enter__.return_value = mock_ydl_instance
+        
+        mock_info = {"title": "Test Video", "ext": "mp4"}
+        mock_ydl_instance.extract_info.return_value = mock_info
+        expected_filename = os.path.join(output_dir, "Test Video.mp4")
+        mock_ydl_instance.prepare_filename.return_value = expected_filename
+        with open(expected_filename, "w") as f:
+            f.write("dummy")
+
+        downloader.download(test_url)
+        called_args, _ = mock_ydl_class.call_args
+        opts = called_args[0]
+        assert 'download_ranges' in opts
+
+    # 2. format SS
+    downloader = VideoDownloader(output_dir=output_dir, time_range="30-90")
+    with patch("yt_dlp.YoutubeDL") as mock_ydl_class:
+        mock_ydl_instance = MagicMock()
+        mock_ydl_class.return_value.__enter__.return_value = mock_ydl_instance
+        
+        mock_info = {"title": "Test Video", "ext": "mp4"}
+        mock_ydl_instance.extract_info.return_value = mock_info
+        expected_filename = os.path.join(output_dir, "Test Video.mp4")
+        mock_ydl_instance.prepare_filename.return_value = expected_filename
+        with open(expected_filename, "w") as f:
+            f.write("dummy")
+
+        downloader.download(test_url)
+        called_args, _ = mock_ydl_class.call_args
+        opts = called_args[0]
+        assert 'download_ranges' in opts
+
+
+def test_download_invalid_time_range_format(tmp_path):
+    """Test that VideoDownloadError is raised if time range format is invalid."""
+    output_dir = str(tmp_path / "invalid_time_range")
+    downloader = VideoDownloader(output_dir=output_dir, time_range="invalid_range")
+    test_url = "https://www.youtube.com/watch?v=aqz-KE-bpKQ"
+
+    with pytest.raises(VideoDownloadError) as exc_info:
+        downloader.download(test_url)
+    assert "Invalid time range format" in str(exc_info.value)
+
+
+def test_download_subtitle_fallback_srt(tmp_path):
+    """Test subtitle path fallback when expected exact srt name is not found but another matching srt is."""
+    output_dir = str(tmp_path / "fallback_srt")
+    downloader = VideoDownloader(output_dir=output_dir, subs_from_yt="zh-TW")
+    test_url = "https://www.youtube.com/watch?v=aqz-KE-bpKQ"
+
+    with patch("yt_dlp.YoutubeDL") as mock_ydl_class:
+        mock_ydl_instance = MagicMock()
+        mock_ydl_class.return_value.__enter__.return_value = mock_ydl_instance
+        
+        mock_info = {"title": "Test Video", "ext": "mp4"}
+        mock_ydl_instance.extract_info.return_value = mock_info
+        
+        expected_video_filename = os.path.join(output_dir, "Test Video.mp4")
+        fallback_srt_filename = os.path.join(output_dir, "Test Video.some_random_suffix.srt")
+        mock_ydl_instance.prepare_filename.return_value = expected_video_filename
+
+        os.makedirs(output_dir, exist_ok=True)
+        with open(expected_video_filename, "w") as f:
+            f.write("dummy video")
+        with open(fallback_srt_filename, "w") as f:
+            f.write("dummy fallback srt")
+
+        video_path, subtitle_path = downloader.download(test_url)
+
+        assert subtitle_path == os.path.abspath(fallback_srt_filename)
+
+
+def test_download_subtitle_vtt_conversion_success(tmp_path):
+    """Test subtitle path conversion from VTT to SRT when FFmpeg succeeds."""
+    output_dir = str(tmp_path / "vtt_conv")
+    downloader = VideoDownloader(output_dir=output_dir, subs_from_yt="zh-TW")
+    test_url = "https://www.youtube.com/watch?v=aqz-KE-bpKQ"
+
+    with patch("yt_dlp.YoutubeDL") as mock_ydl_class, \
+         patch("subprocess.run") as mock_run:
+        mock_ydl_instance = MagicMock()
+        mock_ydl_class.return_value.__enter__.return_value = mock_ydl_instance
+        
+        mock_info = {"title": "Test Video", "ext": "mp4"}
+        mock_ydl_instance.extract_info.return_value = mock_info
+        
+        expected_video_filename = os.path.join(output_dir, "Test Video.mp4")
+        expected_vtt_filename = os.path.join(output_dir, "Test Video.zh-TW.vtt")
+        expected_srt_filename = os.path.join(output_dir, "Test Video.zh-TW.srt")
+        mock_ydl_instance.prepare_filename.return_value = expected_video_filename
+
+        os.makedirs(output_dir, exist_ok=True)
+        with open(expected_video_filename, "w") as f:
+            f.write("dummy video")
+        with open(expected_vtt_filename, "w") as f:
+            f.write("dummy vtt")
+
+        def mock_subprocess_side_effect(*args, **kwargs):
+            with open(expected_srt_filename, "w") as f:
+                f.write("converted srt")
+            return MagicMock(returncode=0)
+        
+        mock_run.side_effect = mock_subprocess_side_effect
+
+        video_path, subtitle_path = downloader.download(test_url)
+
+        assert subtitle_path == os.path.abspath(expected_srt_filename)
+        assert os.path.exists(expected_srt_filename)
+        mock_run.assert_called_once()
+
+
+def test_download_subtitle_fallback_vtt_conversion_success(tmp_path):
+    """Test subtitle path conversion from fallback VTT when exact name VTT is not found."""
+    output_dir = str(tmp_path / "fallback_vtt_conv")
+    downloader = VideoDownloader(output_dir=output_dir, subs_from_yt="zh-TW")
+    test_url = "https://www.youtube.com/watch?v=aqz-KE-bpKQ"
+
+    with patch("yt_dlp.YoutubeDL") as mock_ydl_class, \
+         patch("subprocess.run") as mock_run:
+        mock_ydl_instance = MagicMock()
+        mock_ydl_class.return_value.__enter__.return_value = mock_ydl_instance
+        
+        mock_info = {"title": "Test Video", "ext": "mp4"}
+        mock_ydl_instance.extract_info.return_value = mock_info
+        
+        expected_video_filename = os.path.join(output_dir, "Test Video.mp4")
+        fallback_vtt_filename = os.path.join(output_dir, "Test Video.custom_suffix.vtt")
+        expected_srt_filename = os.path.join(output_dir, "Test Video.custom_suffix.srt")
+        mock_ydl_instance.prepare_filename.return_value = expected_video_filename
+
+        os.makedirs(output_dir, exist_ok=True)
+        with open(expected_video_filename, "w") as f:
+            f.write("dummy video")
+        with open(fallback_vtt_filename, "w") as f:
+            f.write("dummy vtt")
+
+        def mock_subprocess_side_effect(*args, **kwargs):
+            with open(expected_srt_filename, "w") as f:
+                f.write("converted srt")
+            return MagicMock(returncode=0)
+        
+        mock_run.side_effect = mock_subprocess_side_effect
+
+        video_path, subtitle_path = downloader.download(test_url)
+
+        assert subtitle_path == os.path.abspath(expected_srt_filename)
+        assert os.path.exists(expected_srt_filename)
+        mock_run.assert_called_once()
+
+
+def test_download_subtitle_vtt_conversion_failure(tmp_path):
+    """Test subtitle path conversion failure from VTT to SRT when FFmpeg fails."""
+    output_dir = str(tmp_path / "vtt_conv_fail")
+    downloader = VideoDownloader(output_dir=output_dir, subs_from_yt="zh-TW")
+    test_url = "https://www.youtube.com/watch?v=aqz-KE-bpKQ"
+
+    with patch("yt_dlp.YoutubeDL") as mock_ydl_class, \
+         patch("subprocess.run") as mock_run:
+        mock_ydl_instance = MagicMock()
+        mock_ydl_class.return_value.__enter__.return_value = mock_ydl_instance
+        
+        mock_info = {"title": "Test Video", "ext": "mp4"}
+        mock_ydl_instance.extract_info.return_value = mock_info
+        
+        expected_video_filename = os.path.join(output_dir, "Test Video.mp4")
+        expected_vtt_filename = os.path.join(output_dir, "Test Video.zh-TW.vtt")
+        mock_ydl_instance.prepare_filename.return_value = expected_video_filename
+
+        os.makedirs(output_dir, exist_ok=True)
+        with open(expected_video_filename, "w") as f:
+            f.write("dummy video")
+        with open(expected_vtt_filename, "w") as f:
+            f.write("dummy vtt")
+
+        mock_run.side_effect = Exception("FFmpeg command not found or failed")
+
+        video_path, subtitle_path = downloader.download(test_url)
+
+        assert subtitle_path is None
+
+
+def test_list_subtitles_missing_name():
+    """Test subtitle formatting when name is missing or empty in yt-dlp metadata."""
+    test_url = "https://www.youtube.com/watch?v=mocked"
+    
+    with patch("yt_dlp.YoutubeDL") as mock_ydl_class:
+        mock_ydl_instance = MagicMock()
+        mock_ydl_class.return_value.__enter__.return_value = mock_ydl_instance
+        
+        mock_info = {
+            "subtitles": {
+                "en": [{"ext": "vtt"}],
+                "zh-TW": []
+            },
+            "automatic_captions": {
+                "fr": [{"ext": "json3", "name": ""}]
+            }
+        }
+        mock_ydl_instance.extract_info.return_value = mock_info
+        
+        res = VideoDownloader.list_subtitles(test_url)
+        
+        assert res == {
+            "manual": {
+                "en": "en",
+                "zh-TW": "zh-TW"
+            },
+            "auto": {
+                "fr": "fr"
+            }
+        }
+

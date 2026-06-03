@@ -126,6 +126,21 @@ def main() -> None:
 
         # 1. Download video if URL is provided (using temp_dir as sandbox to avoid corrupt partial files)
         if args.url:
+            # If subs_from_yt is enabled, check availability on YouTube first before downloading
+            if args.subs_from_yt and not args.srt:
+                print(f"[*] Checking if subtitle '{args.subs_from_yt}' is available on YouTube...")
+                try:
+                    subs = VideoDownloader.list_subtitles(args.url)
+                    available_langs = set(subs.get("manual", {}).keys()) | set(subs.get("auto", {}).keys())
+                    if args.subs_from_yt not in available_langs:
+                        raise ValueError(
+                            f"Requested subtitle language '{args.subs_from_yt}' is not available on YouTube. "
+                            f"Use --list-subs to check available subtitles."
+                        )
+                    print(f"[+] Subtitle '{args.subs_from_yt}' is available. Proceeding to download video.")
+                except VideoDownloadError as e:
+                    raise ValueError(f"Failed to check subtitle availability: {str(e)}") from e
+
             print(f"[*] Downloading video from {args.url}...")
             downloader = VideoDownloader(
                 output_dir=temp_dir,

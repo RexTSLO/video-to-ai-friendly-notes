@@ -196,6 +196,7 @@ def test_subs_from_yt_success(tmp_path):
         mock_temp_dir = str(tmp_path / "mock_workspace")
         mock_mkdtemp.return_value = mock_temp_dir
 
+        mock_downloader_class.list_subtitles.return_value = {"manual": {"zh-TW": "Chinese (Traditional)"}, "auto": {}}
         mock_downloader_instance = MagicMock()
         mock_downloader_class.return_value = mock_downloader_instance
         downloaded_video = os.path.join(mock_temp_dir, "lecture.mp4")
@@ -277,6 +278,7 @@ def test_subs_from_yt_failure(tmp_path):
         mock_temp_dir = str(tmp_path / "mock_workspace")
         mock_mkdtemp.return_value = mock_temp_dir
 
+        mock_downloader_class.list_subtitles.return_value = {"manual": {"zh-TW": "Chinese (Traditional)"}, "auto": {}}
         mock_downloader_instance = MagicMock()
         mock_downloader_class.return_value = mock_downloader_instance
         downloaded_video = os.path.join(mock_temp_dir, "lecture.mp4")
@@ -561,6 +563,35 @@ def test_cli_url_unescaping():
         main()
         
     mock_list_subs.assert_called_once_with("https://www.youtube.com/watch?v=mocked&list=abc")
+
+
+def test_subs_from_yt_pre_check_failure(tmp_path):
+    """Test that --subs-from-yt fails immediately in pre-download check if subtitle is not available."""
+    output_pdf = str(tmp_path / "final_output.pdf")
+    
+    test_args = [
+        "src.main",
+        "--url", "https://www.youtube.com/watch?v=mocked",
+        "--output", output_pdf,
+        "--subs-from-yt", "zh-TW"
+    ]
+
+    with patch("sys.argv", test_args), \
+         patch("src.main.VideoDownloader") as mock_downloader_class:
+
+        # Mock list_subtitles to return empty subtitles (not available)
+        mock_downloader_class.list_subtitles.return_value = {
+            "manual": {},
+            "auto": {}
+        }
+
+        # Act & Assert
+        # The pre-download check should raise ValueError before any directory is set up or downloaded
+        with pytest.raises(ValueError) as exc_info:
+            main()
+            
+        assert "is not available on YouTube" in str(exc_info.value)
+
 
 
 

@@ -247,7 +247,7 @@ def test_subs_from_yt_success(tmp_path):
         mock_transcriber_instance.transcribe.assert_not_called()
         
         # 3. parse_srt is called instead on downloaded subtitle
-        mock_transcriber_class.parse_srt.assert_called_once_with(downloaded_srt)
+        mock_transcriber_class.parse_srt.assert_called_once_with(downloaded_srt, deduplicate=False)
         
         # 4. parsed subtitles are written to srt_out_path
         mock_transcriber_instance.write_srt.assert_called_once_with(dummy_subs, expected_srt)
@@ -255,6 +255,93 @@ def test_subs_from_yt_success(tmp_path):
         # Cleanup mock final video
         if os.path.exists(expected_final_video):
             os.remove(expected_final_video)
+
+
+def test_subs_from_yt_auto_success(tmp_path):
+    """Test that --subs-from-yt with auto-generated subtitle successfully parses download subtitles with deduplicate=True."""
+    output_pdf = str(tmp_path / "final_output_auto.pdf")
+    expected_srt = os.path.abspath(str(tmp_path / "subtitles" / "final_output_auto.srt"))
+    
+    test_args = [
+        "src.main",
+        "--url", "https://www.youtube.com/watch?v=mocked",
+        "--output", output_pdf,
+        "--subs-from-yt", "zh-TW"
+    ]
+
+    with patch("sys.argv", test_args), \
+         patch("src.main.tempfile.mkdtemp") as mock_mkdtemp, \
+         patch("src.main.shutil.rmtree") as mock_rmtree, \
+         patch("src.main.shutil.move") as mock_move, \
+         patch("src.main.VideoDownloader") as mock_downloader_class, \
+         patch("src.main.SubtitleTranscriber") as mock_transcriber_class, \
+         patch("src.main.SlideDetector") as mock_detector_class, \
+         patch("src.main.PDFGenerator") as mock_generator_class:
+
+        mock_temp_dir = str(tmp_path / "mock_workspace_auto")
+        mock_mkdtemp.return_value = mock_temp_dir
+
+        # mock lists_subtitles to return zh-TW under auto and not manual
+        mock_downloader_class.list_subtitles.return_value = {"manual": {}, "auto": {"zh-TW": "Chinese (Traditional) (auto-generated)"}}
+        mock_downloader_instance = MagicMock()
+        mock_downloader_class.return_value = mock_downloader_instance
+        downloaded_video = os.path.join(mock_temp_dir, "lecture.mp4")
+        downloaded_srt = os.path.join(mock_temp_dir, "lecture.zh-TW.srt")
+        mock_downloader_instance.download.return_value = (downloaded_video, downloaded_srt)
+
+        # Create dummy downloaded files in sandbox
+        os.makedirs(mock_temp_dir, exist_ok=True)
+        with open(downloaded_video, "w") as f:
+            f.write("dummy video data")
+        with open(downloaded_srt, "w") as f:
+            f.write("dummy srt data")
+
+        # Mock transcriber parse_srt
+        mock_transcriber_instance = MagicMock()
+        mock_transcriber_class.return_value = mock_transcriber_instance
+        dummy_subs = [{"start": 0.0, "end": 2.0, "text": "parsed text"}]
+        mock_transcriber_class.parse_srt.return_value = dummy_subs
+
+        # Mock detector and generator
+        mock_detector_instance = MagicMock()
+        mock_detector_class.return_value = mock_detector_instance
+        mock_detector_instance.detect_slides.return_value = []
+        mock_generator_instance = MagicMock()
+        mock_generator_class.return_value = mock_generator_instance
+
+        # Setup side effect for mock_move to securely simulate video transfer
+        expected_final_video = os.path.abspath(os.path.join("inputs", "lecture.mp4"))
+        def mock_move_side_effect(src, dst):
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            with open(dst, "w") as f:
+                f.write("moved dummy video")
+        mock_move.side_effect = mock_move_side_effect
+
+        # Act
+        main()
+
+        # Assertions
+        # 1. Downloader called with correct parameter
+        mock_downloader_class.assert_called_once_with(
+            output_dir=mock_temp_dir,
+            max_res=720,
+            subs_from_yt="zh-TW",
+            time_range=None
+        )
+        
+        # 2. Whisper transcription is BYPASSED
+        mock_transcriber_instance.transcribe.assert_not_called()
+        
+        # 3. parse_srt is called with deduplicate=True since it's an auto subtitle
+        mock_transcriber_class.parse_srt.assert_called_once_with(downloaded_srt, deduplicate=True)
+        
+        # 4. parsed subtitles are written to srt_out_path
+        mock_transcriber_instance.write_srt.assert_called_once_with(dummy_subs, expected_srt)
+
+        # Cleanup mock final video
+        if os.path.exists(expected_final_video):
+            os.remove(expected_final_video)
+
 
 
 def test_subs_from_yt_failure(tmp_path):

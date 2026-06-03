@@ -79,11 +79,12 @@ class SubtitleTranscriber:
                 f.write(f"{seg['text'].strip()}\n\n")
 
     @staticmethod
-    def parse_srt(srt_filepath: str) -> list[dict]:
+    def parse_srt(srt_filepath: str, deduplicate: bool = False) -> list[dict]:
         """Parse a standard .srt or .vtt subtitle file into a list of segment dictionaries.
 
         Args:
             srt_filepath: Path to the .srt or .vtt file.
+            deduplicate: If True, deduplicates YouTube auto-generated captions.
 
         Returns:
             A list of segment dictionaries containing 'start', 'end', and 'text'.
@@ -140,5 +141,73 @@ class SubtitleTranscriber:
                         "end": end_sec,
                         "text": text
                     })
+        
+        if deduplicate:
+            segments = SubtitleTranscriber._deduplicate_segments(segments)
         return segments
+
+    @staticmethod
+    def _deduplicate_segments(segments: list[dict]) -> list[dict]:
+        """Deduplicate rolling/overlapping subtitles segments from YouTube auto-generated captions."""
+        if not segments:
+            return []
+
+        import re
+
+        def normalize(text: str) -> str:
+            # Keep alphanumeric characters and CJK characters, lowercase
+            return re.sub(r'[^\w\u4e00-\u9fff]', '', text).lower()
+
+        # Step 1: Handle progressive rolling accumulation (Prefix Merging)
+        merged = []
+        current = dict(segments[0])
+        for next_seg in segments[1:]:
+            curr_text_norm = normalize(current["text"])
+            next_text_norm = normalize(next_seg["text"])
+
+            # If next segment text starts with current segment text, and they are temporally close
+            if next_text_norm.startswith(curr_text_norm) and (next_seg["start"] - current["end"] < 2.0):
+                current["end"] = next_seg["end"]
+                current["text"] = next_seg["text"]
+            else:
+                merged.append(current)
+                current = dict(next_seg)
+        merged.append(current)
+
+        # Step 2: Handle suffix-prefix word rollover deduplication
+        def get_overlap_len(s1: str, s2: str) -> int:
+            norm1 = normalize(s1)
+            norm2 = normalize(s2)
+            if not norm1 or not norm2:
+                return 0
+            max_len = min(len(norm1), len(norm2))
+            for i in range(max_len, 0, -1):
+                if norm1[-i:] == norm2[:i]:
+                    # Minimum overlap of 3 characters/words to avoid false positive matches on short common words
+                    if i >= 3:
+                        return i
+            return 0
+
+        def strip_prefix(original: str, norm_prefix_len: int) -> str:
+            # Search backwards to find the maximum characters (including trailing spaces/punctuation) that map to the same normalized prefix
+            for j in range(len(original), -1, -1):
+                if normalize(original[:j]) == normalize(original)[:norm_prefix_len]:
+                    return original[j:]
+            return original
+
+
+        final_segments = [merged[0]]
+        for next_seg in merged[1:]:
+            prev_seg = final_segments[-1]
+            overlap_len = get_overlap_len(prev_seg["text"], next_seg["text"])
+            if overlap_len > 0:
+                cleaned_text = strip_prefix(next_seg["text"], overlap_len)
+                if normalize(cleaned_text):
+                    new_seg = dict(next_seg)
+                    new_seg["text"] = cleaned_text
+                    final_segments.append(new_seg)
+            else:
+                final_segments.append(next_seg)
+
+        return final_segments
 

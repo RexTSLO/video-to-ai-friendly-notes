@@ -122,6 +122,7 @@ def main() -> None:
         os.makedirs(slides_out_dir, exist_ok=True)
         os.makedirs("inputs", exist_ok=True)
 
+        is_auto_sub = False
         video_path = args.input
 
         # 1. Download video if URL is provided (using temp_dir as sandbox to avoid corrupt partial files)
@@ -131,13 +132,15 @@ def main() -> None:
                 print(f"[*] Checking if subtitle '{args.subs_from_yt}' is available on YouTube...")
                 try:
                     subs = VideoDownloader.list_subtitles(args.url)
-                    available_langs = set(subs.get("manual", {}).keys()) | set(subs.get("auto", {}).keys())
-                    if args.subs_from_yt not in available_langs:
+                    manual_langs = subs.get("manual", {})
+                    auto_langs = subs.get("auto", {})
+                    if args.subs_from_yt not in manual_langs and args.subs_from_yt not in auto_langs:
                         raise ValueError(
                             f"Requested subtitle language '{args.subs_from_yt}' is not available on YouTube. "
                             f"Use --list-subs to check available subtitles."
                         )
-                    print(f"[+] Subtitle '{args.subs_from_yt}' is available. Proceeding to download video.")
+                    is_auto_sub = (args.subs_from_yt not in manual_langs)
+                    print(f"[+] Subtitle '{args.subs_from_yt}' is available (Auto-generated: {is_auto_sub}). Proceeding to download video.")
                 except VideoDownloadError as e:
                     raise ValueError(f"Failed to check subtitle availability: {str(e)}") from e
 
@@ -176,7 +179,7 @@ def main() -> None:
                     f"Requested subtitle language '{args.subs_from_yt}' could not be downloaded from YouTube."
                 )
             print(f"[*] Parsing downloaded YouTube subtitles: {temp_srt_path}...")
-            subtitles = SubtitleTranscriber.parse_srt(temp_srt_path)
+            subtitles = SubtitleTranscriber.parse_srt(temp_srt_path, deduplicate=is_auto_sub)
             print(f"[+] Bypassed Whisper transcription. Subtitles loaded successfully.")
         else:
             print(f"[*] Initializing transcription engine ({args.model} on {args.device})...")

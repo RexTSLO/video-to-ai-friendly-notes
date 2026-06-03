@@ -183,3 +183,38 @@ def test_parse_srt_various_time_formats(tmp_path):
     assert segments[0]["start"] == 150.5
     assert segments[0]["end"] == 5.125
 
+
+def test_parse_srt_deduplicate(tmp_path):
+    """Test that parsing SRT with deduplicate=True correctly handles rolling subtitles."""
+    # Mock rolling subtitles typical of YouTube auto-generated captions
+    srt_content = (
+        "1\n"
+        "00:00:09,750 --> 00:00:09,760\n"
+        "我們開始吧。歡迎大家學習\n\n"
+        "2\n"
+        "00:00:09,760 --> 00:00:13,110\n"
+        "我們開始吧。歡迎大家學習 雲端程式碼最佳實務。在本次演講中，\n\n"
+        "3\n"
+        "00:00:13,110 --> 00:00:13,120\n"
+        "雲端程式碼最佳實務。在本次演講中，\n\n"
+        "4\n"
+        "00:00:13,120 --> 00:00:14,870\n"
+        "雲端程式碼最佳實務。在本次演講中， 我將從\n\n"
+    )
+    srt_file = tmp_path / "rolling_test.srt"
+    srt_file.write_text(srt_content, encoding="utf-8")
+
+    # Act: Parse with deduplicate=True
+    segments = SubtitleTranscriber.parse_srt(str(srt_file), deduplicate=True)
+
+    # Assert: Should merge prefix and strip overlapping suffix-prefix
+    assert len(segments) == 2
+    assert segments[0]["start"] == 9.75
+    assert segments[0]["end"] == 13.11
+    assert segments[0]["text"] == "我們開始吧。歡迎大家學習 雲端程式碼最佳實務。在本次演講中，"
+    
+    assert segments[1]["start"] == 13.11
+    assert segments[1]["end"] == 14.87
+    assert segments[1]["text"].strip() == "我將從"
+
+

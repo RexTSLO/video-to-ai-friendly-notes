@@ -14,7 +14,8 @@ class VideoDownloader:
         output_dir: str = "downloads",
         max_res: int = 720,
         subs_from_yt: str = None,
-        time_range: str = None
+        time_range: str = None,
+        cookiefile: str = None
     ) -> None:
         """Initialize the VideoDownloader with download configurations.
 
@@ -23,11 +24,13 @@ class VideoDownloader:
             max_res: Maximum height resolution for the video (e.g., 480, 720, 1080).
             subs_from_yt: Target language code to download subtitles from YouTube (e.g. "zh-TW").
             time_range: Time range section to download in "HH:MM:SS-HH:MM:SS" format.
+            cookiefile: Path to a cookie file in Netscape format.
         """
         self.output_dir = output_dir
         self.max_res = max_res
         self.subs_from_yt = subs_from_yt
         self.time_range = time_range
+        self.cookiefile = cookiefile
 
     def download(self, url: str) -> tuple[str, str | None]:
         """Download the video from the given URL with options and return (video_path, subtitle_path).
@@ -50,7 +53,13 @@ class VideoDownloader:
             'format': f'bestvideo[height<={self.max_res}][ext=mp4]+bestaudio[ext=m4a]/best[height<={self.max_res}][ext=mp4]/best',
             'outtmpl': os.path.join(self.output_dir, '%(title)s.%(ext)s'),
             'noplaylist': True,
+            'remote_components': {'ejs:github'},
+            'js_runtimes': {'deno': {}, 'node': {}},
         }
+
+
+        if self.cookiefile:
+            ydl_opts['cookiefile'] = self.cookiefile
 
         # Subtitles configuration
         if self.subs_from_yt:
@@ -134,11 +143,15 @@ class VideoDownloader:
             raise VideoDownloadError(f"Failed to download video from {url}: {str(e)}") from e
 
     @staticmethod
-    def list_subtitles(url: str) -> dict[str, dict[str, str]]:
+    def list_subtitles(
+        url: str,
+        cookiefile: str = None
+    ) -> dict[str, dict[str, str]]:
         """Retrieve lists of available manual subtitles and automatic captions for the given URL.
 
         Args:
             url: The YouTube video URL to query.
+            cookiefile: Path to a cookie file in Netscape format.
 
         Returns:
             A dictionary containing:
@@ -153,10 +166,20 @@ class VideoDownloader:
         ydl_opts = {
             'noplaylist': True,
             'extract_flat': False,
+            'ignore_no_formats_error': True,
+            'youtube_include_dash_manifest': False,
+            'youtube_include_hls_manifest': False,
+            'remote_components': {'ejs:github'},
+            'js_runtimes': {'deno': {}, 'node': {}},
         }
+
+        if cookiefile:
+            ydl_opts['cookiefile'] = cookiefile
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=False)
+                if info is None:
+                    raise VideoDownloadError("Failed to retrieve subtitles list (no metadata extracted)")
                 
                 def format_subs(sub_dict):
                     formatted = {}

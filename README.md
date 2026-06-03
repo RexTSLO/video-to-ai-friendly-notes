@@ -132,6 +132,23 @@ python3 -m src.main -i "path/to/lecture.mp4" -o output_notes.pdf -m medium -l zh
 > Upon successful completion, the script automatically saves both the `.pdf` formatted notes and a companion `.srt` subtitle file under the **`outputs/`** directory to keep your root directory clean.
 > **Smart Directory Dispatching**: Downloaded YouTube videos are saved under the `inputs/` directory, while all generated outputs (PDF notes, companion `.srt` subtitles, and slide images) are automatically cataloged and dispatched to dedicated subdirectories under `outputs/` (`pdf/`, `subtitles/`, and `slides/`).
 
+### 🔑 YouTube Authentication (Bypassing 429 Rate Limits)
+
+To prevent `HTTP Error 429: Too Many Requests` or to download private/age-restricted videos, you can provide a Netscape cookies file using the `--cookies` parameter.
+
+#### 🛡️ Best Security Practice (Minimalist Export)
+For maximum privacy, the `--cookies-from-browser` feature of `yt-dlp` is currently not supported. Instead, it is highly recommended to **manually export** a Netscape format cookies file and filter it to keep only the essential cookies for YouTube:
+
+1. Log in to YouTube in your browser.
+2. Export your cookies in **Netscape** format using a browser extension (such as [Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc?hl=en)).
+3. Edit the exported text file and delete all lines **except** the following two essential cookies:
+   * **`LOGIN_INFO`**: Handles the YouTube-specific login authentication.
+   * **`VISITOR_INFO1_LIVE`**: Used by YouTube to recognize your visitor session (necessary to bypass anti-bot 429 rate limits).
+4. Run the tool with:
+   ```bash
+   python3 -m src.main -u "https://www.youtube.com/watch?v=xxx" --cookies downloads/your_youtube_cookies.txt
+   ```
+
 ---
 
 ## 🎛️ CLI Argument Options
@@ -150,6 +167,7 @@ python3 -m src.main -i "path/to/lecture.mp4" -o output_notes.pdf -m medium -l zh
 | *None* | `--max-res` | `720` | Maximum height resolution for downloaded YouTube video (e.g., `480`, `720`, `1080`) to optimize download and OpenCV performance. |
 | *None* | `--time-range` | *None* | Specific section of the video to download and process in `HH:MM:SS-HH:MM:SS` format. |
 | *None* | `--srt` | *None* | Path to a local `.srt` or `.vtt` file to use, completely bypassing Whisper transcribing and YouTube subtitle downloading. |
+| *None* | `--cookies` | *None* | Path to a cookies file in Netscape format (useful to bypass 429 rate limit errors). |
 | *None* | `--min-duration` | `1.0` | Minimum slide duration cooldown in seconds between two slide transitions (lower = more keyframes for rapid slide changes). |
 | *None* | `--slide-mode` | `final` | Slide animation capture strategy (`final` to keep only the completed slide, `all` to capture all stages, `first` to keep only the initial state). |
 

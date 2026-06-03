@@ -55,6 +55,18 @@ def main() -> None:
     pipeline_group.add_argument("--min-duration", type=float, default=1.0, help="Minimum slide duration cooldown in seconds between two slide transitions (default: 1.0).")
     pipeline_group.add_argument("--slide-mode", default="final", choices=["final", "all", "first"], help="Slide animation capture strategy (default: final).")
 
+    # Authentication Options
+    auth_group = parser.add_argument_group(
+        "Authentication Options (身分驗證，可選，用於避免 429 阻擋)",
+        "Configure cookie sources to bypass YouTube rate limits (429 errors)."
+    )
+
+    auth_group.add_argument(
+        "--cookies",
+        default=None,
+        help="Path to a cookies file in Netscape format."
+    )
+
     args = parser.parse_args()
 
     # Clean up shell-escaping backslashes in YouTube URL if provided
@@ -69,7 +81,11 @@ def main() -> None:
         
         print(f"[*] Fetching available subtitles for YouTube URL: {args.url}...")
         try:
-            subs = VideoDownloader.list_subtitles(args.url)
+            subs_kwargs = {}
+
+            if args.cookies:
+                subs_kwargs['cookiefile'] = args.cookies
+            subs = VideoDownloader.list_subtitles(args.url, **subs_kwargs)
             manual_subs = subs.get("manual", {})
             auto_subs = subs.get("auto", {})
             
@@ -131,7 +147,11 @@ def main() -> None:
             if args.subs_from_yt and not args.srt:
                 print(f"[*] Checking if subtitle '{args.subs_from_yt}' is available on YouTube...")
                 try:
-                    subs = VideoDownloader.list_subtitles(args.url)
+                    subs_kwargs = {}
+
+                    if args.cookies:
+                        subs_kwargs['cookiefile'] = args.cookies
+                    subs = VideoDownloader.list_subtitles(args.url, **subs_kwargs)
                     manual_langs = subs.get("manual", {})
                     auto_langs = subs.get("auto", {})
                     if args.subs_from_yt not in manual_langs and args.subs_from_yt not in auto_langs:
@@ -145,12 +165,17 @@ def main() -> None:
                     raise ValueError(f"Failed to check subtitle availability: {str(e)}") from e
 
             print(f"[*] Downloading video from {args.url}...")
-            downloader = VideoDownloader(
-                output_dir=temp_dir,
-                max_res=args.max_res,
-                subs_from_yt=None if args.srt else args.subs_from_yt,
-                time_range=args.time_range
-            )
+            downloader_kwargs = {
+                "output_dir": temp_dir,
+                "max_res": args.max_res,
+                "subs_from_yt": None if args.srt else args.subs_from_yt,
+                "time_range": args.time_range
+            }
+
+            if args.cookies:
+                downloader_kwargs["cookiefile"] = args.cookies
+
+            downloader = VideoDownloader(**downloader_kwargs)
             temp_video_path, temp_srt_path = downloader.download(args.url)
             
             # Safe Transfer: Move only successfully merged complete video to inputs/ directory

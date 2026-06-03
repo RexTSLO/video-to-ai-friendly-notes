@@ -133,6 +133,24 @@ python3 -m src.main -i "path/to/lecture.mp4" -o output_notes.pdf -m medium -l zh
 > [!NOTE]  
 > 執行完畢後，講義與同名 `.srt` 字幕檔案預設會自動安全存放在專案的 `outputs/` 目錄中，保持根目錄的整潔。
 > **目錄分流 (Smart Output Dispatcher)**：執行完畢後，Youtube下載影片會存放於 `inputs/` 目錄下；講義與同名 `.srt` 字幕檔案預設會自動分門別類地存放在專案的 `outputs/` 目錄下（PDF 講義存放於 `pdf/`、字幕存放於 `subtitles/`、投影片圖檔則歸類於 `slides/`）。
+
+### 🔑 YouTube 身分驗證 (解決 429 頻率限制)
+
+為防止下載時出現 `HTTP Error 429: Too Many Requests` 或是需要下載私人/會員影片，您可以使用 `--cookies` 參數傳入 Netscape 格式的 Cookie 檔案。
+
+#### 🛡️ 安全最佳實踐 (最小化 Cookie 導出)
+為了最大化您的帳號隱私，目前不支援 yt-dlp的 `--cookies-from-browser` 功能，而是建議**手動導出** Netscape 格式的 Cookie 檔案後再進行過濾，僅保留 YouTube 下載所需的最少 Cookie：
+
+1. 在瀏覽器中登入 YouTube。
+2. 使用瀏覽器擴充功能（如 [Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc?hl=en)）導出 **Netscape** 格式的 Cookie 檔案。
+3. 使用文字編輯器打開導出的檔案，刪除**除以下兩行之外**的所有 Cookie 紀錄：
+   * **`LOGIN_INFO`**：YouTube 專屬的登入狀態驗證。
+   * **`VISITOR_INFO1_LIVE`**：YouTube 用於識別訪客 Session 的臨時 ID（這項能有效防止被判定為爬蟲而觸發 429 限制）。
+4. 使用以下指令執行：
+   ```bash
+   python3 -m src.main -u "https://www.youtube.com/watch?v=xxx" --cookies downloads/your_youtube_cookies.txt
+   ```
+
 ---
 
 ## 🎛️ CLI 參數說明
@@ -151,6 +169,7 @@ python3 -m src.main -i "path/to/lecture.mp4" -o output_notes.pdf -m medium -l zh
 | *無* | `--max-res` | `720` | 限制下載 YouTube 影片的最大高度解析度（例如 `480`, `720`, `1080`），有效縮短下載時間及提升 OpenCV 影格處理效率。 |
 | *無* | `--time-range` | *None* | 指定要下載與處理的影片時間區段，格式為 `HH:MM:SS-HH:MM:SS`（例如 `00:10:00-00:20:30`）。 |
 | *無* | `--srt` | *None* | 指定本地 `.srt` 或 `.vtt` 字幕檔案路徑，完全跳過 Whisper 語音轉譯與 YouTube 字幕下載流程。 |
+| *無* | `--cookies` | *None* | 指定 Netscape 格式的 Cookie 檔案路徑（用於規避 YouTube 429 頻率限制錯誤）。 |
 | *無* | `--min-duration` | `1.0` | 兩次投影片切換之間的最小冷卻秒數（越低越能捕捉快速切換的投影片）。 |
 | *無* | `--slide-mode` | `final` | 投影片動畫擷取策略（`final` 只保留最終動畫完成版、`all` 擷取所有步驟、`first` 只保留初始無動畫版） |
 

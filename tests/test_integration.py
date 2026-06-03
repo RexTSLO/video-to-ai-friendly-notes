@@ -680,6 +680,87 @@ def test_subs_from_yt_pre_check_failure(tmp_path):
         assert "is not available on YouTube" in str(exc_info.value)
 
 
+def test_cli_cookie_arguments_passed(tmp_path):
+    """Test that --cookies option is correctly passed through to downloader."""
+    output_pdf = str(tmp_path / "final_output.pdf")
+    
+    test_args = [
+        "src.main",
+        "--url", "https://www.youtube.com/watch?v=mocked",
+        "--output", output_pdf,
+        "--subs-from-yt", "zh-TW",
+        "--cookies", "path/to/cookies.txt"
+    ]
+
+    with patch("sys.argv", test_args), \
+         patch("src.main.VideoDownloader") as mock_downloader_class, \
+         patch("src.main.SubtitleTranscriber") as mock_transcriber_class, \
+         patch("src.main.SlideDetector") as mock_detector_class, \
+         patch("src.main.PDFGenerator") as mock_generator_class, \
+         patch("shutil.move") as mock_move:
+
+        # 1. Mock list_subtitles to return subtitles
+        mock_downloader_class.list_subtitles.return_value = {
+            "manual": {"zh-TW": "Chinese"},
+            "auto": {}
+        }
+        
+        # 2. Mock downloader instance
+        mock_downloader_instance = MagicMock()
+        mock_downloader_class.return_value = mock_downloader_instance
+        
+        mock_transcriber_instance = MagicMock()
+        mock_transcriber_class.return_value = mock_transcriber_instance
+        mock_transcriber_class.parse_srt.return_value = []
+        
+        mock_detector_instance = MagicMock()
+        mock_detector_class.return_value = mock_detector_instance
+        mock_detector_instance.detect_slides.return_value = []
+        
+        mock_generator_instance = MagicMock()
+        mock_generator_class.return_value = mock_generator_instance
+        
+        expected_final_video = os.path.abspath(os.path.join("inputs", "mocked.mp4"))
+        
+        def mock_move_side_effect(src, dst):
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            with open(dst, "w") as f:
+                f.write("moved dummy video")
+        mock_move.side_effect = mock_move_side_effect
+        
+        # Setup mock temp directory
+        mock_temp_dir = str(tmp_path / "mock_temp")
+        os.makedirs(mock_temp_dir, exist_ok=True)
+        with patch("tempfile.mkdtemp", return_value=mock_temp_dir):
+            mocked_srt_path = os.path.join(mock_temp_dir, "mocked.zh-TW.srt")
+            with open(mocked_srt_path, "w") as f:
+                f.write("dummy srt content")
+            
+            mocked_video_path = os.path.join(mock_temp_dir, "mocked.mp4")
+            with open(mocked_video_path, "w") as f:
+                f.write("dummy video content")
+                
+            mock_downloader_instance.download.return_value = (mocked_video_path, mocked_srt_path)
+            
+            main()
+            
+        # Verify list_subtitles was called with cookies
+        mock_downloader_class.list_subtitles.assert_called_once_with(
+            "https://www.youtube.com/watch?v=mocked",
+            cookiefile="path/to/cookies.txt"
+        )
+        
+        # Verify VideoDownloader was instantiated with cookies
+        called_args, called_kwargs = mock_downloader_class.call_args
+        assert called_kwargs["cookiefile"] == "path/to/cookies.txt"
+        
+        # Cleanup mock final video
+        if os.path.exists(expected_final_video):
+            os.remove(expected_final_video)
+
+
+
+
 
 
 

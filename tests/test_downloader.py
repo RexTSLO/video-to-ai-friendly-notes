@@ -35,6 +35,8 @@ def test_download_video_default(tmp_path):
             'format': 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best',
             'outtmpl': os.path.join(output_dir, '%(title)s.%(ext)s'),
             'noplaylist': True,
+            'remote_components': {'ejs:github'},
+            'js_runtimes': {'deno': {}, 'node': {}},
         }
         mock_ydl_class.assert_called_once_with(expected_opts)
         mock_ydl_instance.extract_info.assert_called_once_with(test_url, download=True)
@@ -374,4 +376,55 @@ def test_list_subtitles_missing_name():
                 "fr": "fr"
             }
         }
+
+
+def test_download_video_with_cookies(tmp_path):
+    """Test that cookiefile is passed to ydl_opts during download."""
+    output_dir = str(tmp_path / "cookies_download")
+    downloader = VideoDownloader(
+        output_dir=output_dir,
+        cookiefile="dummy_cookies.txt"
+    )
+    test_url = "https://www.youtube.com/watch?v=mocked"
+
+    with patch("yt_dlp.YoutubeDL") as mock_ydl_class:
+        mock_ydl_instance = MagicMock()
+        mock_ydl_class.return_value.__enter__.return_value = mock_ydl_instance
+        
+        mock_info = {"title": "Test Video", "ext": "mp4"}
+        mock_ydl_instance.extract_info.return_value = mock_info
+        expected_filename = os.path.join(output_dir, "Test Video.mp4")
+        mock_ydl_instance.prepare_filename.return_value = expected_filename
+
+        os.makedirs(output_dir, exist_ok=True)
+        with open(expected_filename, "w") as f:
+            f.write("dummy")
+
+        video_path, subtitle_path = downloader.download(test_url)
+
+        # Verify ydl_opts contains cookies keys
+        called_args, called_kwargs = mock_ydl_class.call_args
+        opts = called_args[0]
+        assert opts['cookiefile'] == "dummy_cookies.txt"
+
+
+def test_list_subtitles_with_cookies():
+    """Test that cookiefile is passed to ydl_opts during list_subtitles."""
+    test_url = "https://www.youtube.com/watch?v=mocked"
+    
+    with patch("yt_dlp.YoutubeDL") as mock_ydl_class:
+        mock_ydl_instance = MagicMock()
+        mock_ydl_class.return_value.__enter__.return_value = mock_ydl_instance
+        mock_ydl_instance.extract_info.return_value = {}
+
+        VideoDownloader.list_subtitles(
+            test_url,
+            cookiefile="custom_cookies.txt"
+        )
+        
+        called_args, called_kwargs = mock_ydl_class.call_args
+        opts = called_args[0]
+        assert opts['cookiefile'] == "custom_cookies.txt"
+
+
 

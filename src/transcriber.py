@@ -25,7 +25,7 @@ class SubtitleTranscriber:
             initial_prompt: Optional initial prompt to guide whisper's style/vocab.
 
         Returns:
-            A list of segment dictionaries, e.g., [{"start": 0.0, "end": 2.5, "text": "哈囉"}]
+            A list of segment dictionaries, e.g., [{"start": 0.0, "end": 2.5, "text": "Hello"}]
 
         Raises:
             FileNotFoundError: If the media_path does not exist.

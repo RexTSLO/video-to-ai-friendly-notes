@@ -23,7 +23,7 @@ def main() -> None:
     
     # Mode Options
     mode_group = parser.add_argument_group(
-        "Mode Options (模式選擇)",
+        "Mode Options",
         "Select the primary operation mode. If --list-subs is specified, the pipeline will only list available subtitles on YouTube and exit."
     )
     mode_group.add_argument(
@@ -33,14 +33,14 @@ def main() -> None:
     )
 
     # Input Options
-    input_group = parser.add_argument_group("Input Options (輸入來源，必選其一)")
+    input_group = parser.add_argument_group("Input Options (Select one of the following)")
     ex_group = input_group.add_mutually_exclusive_group(required=True)
     ex_group.add_argument("-u", "--url", help="YouTube video URL to download.")
     ex_group.add_argument("-i", "--input", help="Local video file path.")
 
     # Pipeline Options
     pipeline_group = parser.add_argument_group(
-        "Pipeline Options (講義生成參數，僅在非 --list-subs 模式下生效)",
+        "Pipeline Options (Effective only in non --list-subs mode)",
         "Configure the slide detection, Whisper transcription, and PDF compilation settings."
     )
     pipeline_group.add_argument("-o", "--output", default="outputs/pdf/lecture_notes.pdf", help="Output destination PDF path.")
@@ -57,7 +57,7 @@ def main() -> None:
 
     # Authentication Options
     auth_group = parser.add_argument_group(
-        "Authentication Options (身分驗證，可選，用於避免 429 阻擋)",
+        "Authentication Options (Optional, used to bypass 429 rate limits)",
         "Configure cookie sources to bypass YouTube rate limits (429 errors)."
     )
 
@@ -93,19 +93,19 @@ def main() -> None:
             print("Available Subtitles / Captions")
             print("==================================================")
             
-            print("\n[Manual Subtitles (手動建立字幕)]")
+            print("\n[Manual Subtitles]")
             if manual_subs:
                 for lang_code, lang_name in sorted(manual_subs.items()):
                     print(f"  - {lang_code}: {lang_name}")
             else:
-                print("  None (無)")
+                print("  None")
                 
-            print("\n[Automatic Captions (自動語音識別字幕)]")
+            print("\n[Automatic Captions]")
             if auto_subs:
                 for lang_code, lang_name in sorted(auto_subs.items()):
                     print(f"  - {lang_code}: {lang_name}")
             else:
-                print("  None (無)")
+                print("  None")
             print("==================================================\n")
             sys.exit(0)
         except VideoDownloadError as e:

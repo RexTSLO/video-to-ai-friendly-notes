@@ -6,20 +6,21 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Tests Passed](https://img.shields.io/badge/tests-25%20passed-success.svg)](#單元與整合測試)
 
-`video-to-ai-friendly-notes` 是一個模組化、輕量且高效的 Python 工具。它能夠一鍵下載 YouTube 課程影片（或讀取本地影片），自動偵測投影片切換畫面，整合語音轉文字（Speech-to-Text）生成精準字幕，最終編排輸出成**對 AI / LLM / RAG 極度友善的高結構化 PDF 講義筆記**（且完美支援繁體中文）。
+`video-to-ai-friendly-notes` 是一個模組化、輕量且高效的 Python 工具。只需輸入一個 YouTube 連結或本地影片，它就能自動**下載影片、精準擷取投影片畫面、將語音轉為逐字稿，並將圖文完美對齊編排**。最終為您生成一份**對人類閱讀與 AI/RAG（如 Google NotebookLM）解析都極度友善的高結構化 PDF 講義筆記**。
 
 ---
 
-## 🚀 核心特色
+## 🚀 核心功能
 
-1.  **影格變更自動偵測 (Slide Detector)**：使用 OpenCV 進行相鄰影格的 MAE（Mean Absolute Error）差異演算。透過 1 FPS 降採樣、縮圖 `(160, 90)` 灰階優化以降低 CPU 開銷。**獨家融入三大工業級最佳化設計**：防模糊切換動畫的「穩定後抓幀」機制、過濾黑屏白屏的「標準差單色過濾器」，以及自動補齊結尾內容的「尾影格自動補幀」。**新增投影片動畫整合引擎** (`--slide-mode`)：自動將低變動的建構式動畫（Build-up Animations）影格合併為最終完成版投影片，完美銜接各動畫階段的演講字幕，並自動清理磁碟上未完成的過渡影格。
-2.  **極速語音轉字幕 (Whisper Transcriber)**：直接整合 `faster-whisper` CTranslate2 推理引擎，不依賴額外的 CLI 包裝。當偵測語系為 `zh` 且無提供 initial prompt 時，**自動帶入繁體中文引導 prompt**，確保精準的繁體中文 SRT 字幕輸出。
-3.  **對 AI / RAG 極友善的 PDF 講義編排**：
-    *   **繁體中文支援**：首次執行時會自動下載並註冊 `NotoSansCJKtc` 字型，徹底防止中文字元在 PDF 中變成空白方塊（Glyph Error），並具備優雅的 system font fallback 機制。
-    *   **高結構化 layout**：每頁包含明確的 `Slide X (Timestamp)` 標記區塊、投影片縮圖，以及與時間軸精準對齊的字幕筆記文字（`[MM:SS] 文字`），利於各類多模態大模型（VLM）與 RAG 系統直接高精確度解析。
-4.  **強健的沙盒機制**：自動管理 `tempfile` 臨時資料夾。影片下載過程將先置於臨時沙盒中，待安全且完整下載合併完畢後才轉移至 `inputs/` 目錄，防止損壞的不全檔案殘留於工作區。
-5.  **100% 離線 CI-safe 測試**：本專案採用嚴格的 TDD 設計，所有重型與網路依賴元件（`yt-dlp`、`faster-whisper`、`cv2`、`urllib`、`fpdf2`）皆有對應 of mock 測試，使 20 個單元與整合測試案例能在 2 秒內於無 GPU、無連網環境下秒過。
-6.  **智慧型產出目錄分流 (Smart Directory Dispatcher)**：為維持工作區簡潔與美感，產出的檔案不再散置於根目錄。所有產出預設安全儲存於 `outputs/` 目錄中並根據類型智慧分流：PDF 講義存放於 `outputs/pdf/`，SRT 字幕存放於 `outputs/subtitles/`，而 OpenCV 的投影片 JPEG 影格則永久歸納於專屬的 `outputs/slides/{產出名稱}/` 資料夾中。
+1. **投影片畫面自動擷取 (Slide Detector)**：自動偵測並擷取投影片切換的關鍵影格，聰明過濾切換過程中的模糊動畫與黑白屏。特別支援**動畫整合模式** (`--slide-mode`)，能將逐步疊加（Build-up）的投影片動畫合併為最終完成版，既保留完整簡報內容，又不會產生多餘的重複頁面。
+2. **極速語音轉字幕 (Whisper Transcriber)**：直接整合 `faster-whisper` CTranslate2 推理引擎，不依賴額外的 CLI 包裝。
+3. **完美對齊的圖文講義排版 (AI & Human Friendly Layout)**：
+   * **繁體中文完美支援**：首次執行時會自動下載並註冊中文字型，徹底防止中文字元在 PDF 中變成空白方塊（豆腐字）。
+   * **高結構化排版**：每頁講義皆將「投影片關鍵影格」與「該時間區段的口述逐字稿」排版在同一個視覺區塊中，方便快速對照。
+4. **極致的 AI 與 RAG 讀取優化 (AI-Ready)**：
+   * 產出的 PDF 講義以每張投影片為單位（`Slide X [MM:SS]`）進行分頁與排版。這對 AI 來說是天然的「知識分塊 (Semantic Chunking)」，讓 NotebookLM 等大模型在解讀或檢索時，能夠精確定位到具體的時間戳記與投影片頁碼，大幅提高回答準確度並節省 Token 消耗。
+5. **智慧型產出目錄分流 (Smart Output Dispatcher)**：Youtube下載影片會存放於 `inputs/`目錄下；所有產出則會自動分門別類存放於 `outputs/` 目錄下（PDF 講義存放於 `pdf/`、字幕存放於 `subtitles/`、投影片圖檔則歸類於 `slides/`）。
+
 
 ---
 

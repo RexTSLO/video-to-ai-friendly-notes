@@ -6,20 +6,22 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Tests Passed](https://img.shields.io/badge/tests-25%20passed-success.svg)](#unit--integration-testing)
 
-`video-to-ai-friendly-notes` is a modular, lightweight, and highly efficient Python command-line utility. It automates downloading lecture videos from YouTube (or processing local video files), detects slide changes, generates precise synchronized speech-to-text transcripts, and ultimately exports them into **beautifully typeset, highly structured, AI-friendly PDF study notes** (with robust out-of-the-box Traditional Chinese support).
+Have you ever spent hours scrubbing through a 2-hour lecture or technical presentation video just to find a key slide? Or tried feeding messy raw speech transcripts to an AI, only to get vague, hallucinated answers because it lacked visual context like diagrams and code blocks?
+
+`video-to-ai-friendly-notes` is an automated tool designed to solve this exact problem. Simply provide a YouTube URL or a local video file, and it will automatically **download the video, extract slide frames, transcribe the speech, and align them perfectly**. The result is a **highly structured PDF study guide optimized for both human reading and ingestion by AI/RAG systems (such as Google NotebookLM)**—saving you time and supercharging your AI's accuracy.
 
 ---
 
 ## 🚀 Core Features
 
-1.  **Slide Transition Detection (OpenCV)**: Evaluates frame difference using Mean Absolute Error (MAE) algorithms. Implements 1 FPS downsampling, frame downscaling `(160, 90)`, and grayscale conversions to keep CPU overhead low. **Integrates three industrial optimizations**: anti-ghosting "stabilized capture", standard deviation blank/solid frame filtering, and automatic tail-frame protection. **Features a Slide Animation Consolidation Engine** (`--slide-mode`) to merge low-change incremental slide animations into the final slide, sync explanation subtitles, and auto-cleanup intermediate steps.
-2.  **Fast Whisper Transcription (faster-whisper)**: Integrates `faster-whisper` using CTranslate2 engine directly for fast local inference. When transcribing in Chinese (`zh`), it **automatically injects a Traditional Chinese prompt** to guide translation output without simplified character leakage.
-3.  **VLM & RAG Optimized PDF Layout**:
-    *   **Chinese & CJK Glyphs Support**: Proactively downloads and caches CJK fonts (`NotoSansCJKtc`) on first launch to eliminate empty block characters (Glyph errors), while offering an elegant defensive Helvetica font fallback.
-    *   **High Semantic Structure**: Each page contains explicit `Slide X (Timestamp)` delimiters, a centered slide image, and chronological, multi-line auto-wrapped transcripts (`[MM:SS] Subtitles`). This layout is highly optimized for parsing by Multimodal Large Language Models (VLMs) and RAG parsers.
-4.  **Sandbox Workspace Isolation**: Video downloading is managed under a temporary sandbox. Successfully merged complete video files are safely transferred to the `inputs/` directory, preventing corrupted partial files from cluttering the project workspace.
-5.  **100% Offline CI-safe Mocks**: Features offline testing where all network or heavy external engines (`yt-dlp`, `faster-whisper`, `cv2`, `urllib`, `FPDF`) are mock decoupled. Run the entire suite of 20 tests in less than 2 seconds completely offline.
-6.  **Smart Directory Dispatcher**: Keeps your workspace clean. Outputs are saved inside the `outputs/` directory and automatically isolated by type: PDFs to `outputs/pdf/`, subtitles to `outputs/subtitles/`, and OpenCV slide keyframe JPEGs are stored under their own dedicated `outputs/slides/{output_name}/` namespace.
+1. **Automated Slide Capture (Slide Detector)**: Automatically detects when a slide changes and captures keyframes, filtering out transitional blur, animations, and black/blank screens. Supports **Animation Consolidation Mode** (`--slide-mode`) to merge incremental slide animations into a single finished slide, capturing complete content without creating duplicate pages.
+2. **Blazing-Fast Audio Transcription (Whisper Transcriber)**: Directly integrates the `faster-whisper` CTranslate2 inference engine without relying on external CLI wrappers.
+3. **Aligned Multi-modal Layout (AI & Human Friendly)**:
+   * **Full CJK/Chinese Support**: Automatically registers CJK fonts on first run to eliminate empty square characters (glyph errors) in generated PDFs.
+   * **Structured Pairing**: Pairs each slide image side-by-side with its chronological speech transcript on a page-by-page basis for easy reference.
+4. **Optimized for NotebookLM & RAG (AI-Ready)**:
+   * The output PDF is chunked naturally page-by-page based on slide transitions (`Slide X [MM:SS]`). This acts as native **Semantic Chunking** for LLMs/RAG, enabling models like NotebookLM to retrieve answers with high precision, cite exact timestamps and page numbers, and minimize input token overhead.
+5. **Smart Directory Dispatching**: Downloaded YouTube videos are saved under the `inputs/` directory, while all generated outputs are automatically cataloged and dispatched to dedicated subdirectories under `outputs/` (`pdf/`, `subtitles/`, and `slides/`).
 
 ---
 

@@ -164,7 +164,7 @@ python3 -m src.main -i "path/to/lecture.mp4" -o output_notes.pdf -m medium -l zh
 | *無* | `--list-subs` | *None* | 查詢並列出 YouTube 影片上所有可下載的手動與自動生成字幕列表，隨後立即退出（僅適用於 `-u/--url`）。 |
 | `-o` | `--output` | `outputs/lecture_notes.pdf` | 生成的 PDF 講義路徑（同名 `.srt` 字幕亦會隨之輸出，若目錄不存在會自動為您建立） |
 | `-m` | `--model` | `medium` | `faster-whisper` 的模型大小（支援 `tiny`, `base`, `small`, `medium`, `large-v3`） |
-| `-l` | `--lang` | `zh` | 語音轉譯的語系代碼（預設 `zh` 會自動帶入繁體中文優化 prompt） |
+| `-l` | `--lang` | `zh` | 語音轉譯的語系代碼（預設 `zh`） |
 | `-t` | `--threshold`| `auto` | 投影片切換偵測的 MAE 敏感度閾值（浮點數，或設為 `"auto"` 以透過 MAD 統計演算法自動計算最優動態閾值） |
 | `-d` | `--device` | `cpu` | 計算推理硬體載體（`cpu` 或 `cuda`） |
 | *無* | `--subs-from-yt` | *None* | 直接從 YouTube 下載指定的字幕語言（例如 `zh-TW`）並跳過本地 Whisper 轉譯。若該影片無此字幕則會報錯並終止。 |

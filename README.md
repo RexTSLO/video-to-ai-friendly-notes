@@ -162,7 +162,7 @@ For maximum privacy, the `--cookies-from-browser` feature of `yt-dlp` is current
 | *None* | `--list-subs` | *None* | List available subtitles (manual and automatic) on YouTube for the URL and exit (only works with `-u/--url`). |
 | `-o` | `--output` | `outputs/lecture_notes.pdf` | Destination path for the final PDF note (and companion `.srt` subtitles, directory will be created automatically if missing). |
 | `-m` | `--model` | `medium` | Whisper model size (`tiny`, `base`, `small`, `medium`, `large-v3`). |
-| `-l` | `--lang` | `zh` | Language code (default `zh` triggers Traditional Chinese prompt). |
+| `-l` | `--lang` | `zh` | Language code (default `zh`). |
 | `-t` | `--threshold`| `auto` | OpenCV slide detection sensitivity threshold (float value, or `"auto"` to dynamically compute optimal threshold using MAD outlier statistics). |
 | `-d` | `--device` | `cpu` | Target computation inference device (`cpu` or `cuda`). |
 | *None* | `--subs-from-yt` | *None* | Directly download specified subtitle language from YouTube (e.g. `zh-TW`), bypassing local Whisper. Errors out if missing. |

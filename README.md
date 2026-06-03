@@ -43,11 +43,11 @@ Designed for long-form lecture videos (e.g., 1+ hour courses). Directly download
 
 | ❌ YouTube Link / Text-only Transcript (AI lacks visual context, leading to generalized answers) |
 | :---: |
-| ![NotebookLM Text Limitation](https://github.com/user-attachments/assets/ea9d5615-1dbb-46ef-a576-ad54496ab66d) |
+| ![NotebookLM Text Limitation](https://github.com/user-attachments/assets/ceac5b69-f380-4951-843e-cfeacbe68e42) |
 
 | 🚀 PDF Slides Notes from this Project (Multimodal alignment, leading to precise answers) |
 | :---: |
-| ![NotebookLM Multimodal Precise Answer](https://github.com/user-attachments/assets/350efa77-858f-422c-ac41-3a33d860eecb) |
+| ![NotebookLM Multimodal Precise Answer](https://github.com/user-attachments/assets/a2b1d739-5ccc-4100-acb3-a7a0c1c5c230) |
 ### 2. Processing YouTube Auto-Generated Subtitles (YT Auto-generated Subtitles)
 For videos without pre-uploaded manual subtitles, this flow seamlessly downloads and processes auto-translated/auto-generated subtitles provided by the YouTube platform to synthesize structural slide-notes on the fly.
 *   **Best Suited For**: Time-sensitive daily news, financial/market analysis commentaries, talk shows with supporting slides/infographics, where no official subtitles are uploaded.

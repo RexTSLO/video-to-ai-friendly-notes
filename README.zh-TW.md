@@ -44,11 +44,11 @@
 
 | ❌ 僅輸入 YouTube 連結/純逐字稿（AI 無法看見畫面，回答籠統） |
 | :---: |
-| ![NotebookLM 純文字限制](https://github.com/user-attachments/assets/ea9d5615-1dbb-46ef-a576-ad54496ab66d) |
+| ![NotebookLM 純文字限制](https://github.com/user-attachments/assets/204f4afd-d904-4286-8b3d-281def4ecfa4) |
 
 | 🚀 輸入本專案產出的 PDF 講義（多模態對齊，回答精確） |
 | :---: |
-| ![NotebookLM 多模態精確回答](https://github.com/user-attachments/assets/350efa77-858f-422c-ac41-3a33d860eecb) |
+| ![NotebookLM 多模態精確回答](https://github.com/user-attachments/assets/e66cf93f-abee-453a-8fd3-5dbd5fbaafc8) |
 
 ### 2. 載入 YouTube 自動生成的字幕 (YT Auto-generated Subtitles)
 針對沒有提供手動校對字幕、僅有 YouTube 系統語音識別自動生成字幕的影片。本工具可直接無縫下載並解析其自動生成字幕（支援自動翻譯/自動轉譯語系），產出講義。

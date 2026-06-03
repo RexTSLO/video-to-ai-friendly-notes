@@ -104,3 +104,51 @@ def test_download_failure(tmp_path):
             downloader.download(test_url)
         
         assert "Failed to download video from" in str(exc_info.value)
+
+def test_list_subtitles_success():
+    """Test successful retrieval and formatting of available subtitles."""
+    test_url = "https://www.youtube.com/watch?v=mocked"
+    
+    with patch("yt_dlp.YoutubeDL") as mock_ydl_class:
+        mock_ydl_instance = MagicMock()
+        mock_ydl_class.return_value.__enter__.return_value = mock_ydl_instance
+        
+        # Structure matching yt-dlp response
+        mock_info = {
+            "subtitles": {
+                "en": [{"ext": "vtt", "name": "English"}],
+                "zh-TW": [{"ext": "srv3", "name": "Chinese (Traditional)"}]
+            },
+            "automatic_captions": {
+                "en": [{"ext": "json3", "name": "English (auto-generated)"}]
+            }
+        }
+        mock_ydl_instance.extract_info.return_value = mock_info
+        
+        res = VideoDownloader.list_subtitles(test_url)
+        
+        assert res == {
+            "manual": {
+                "en": "English",
+                "zh-TW": "Chinese (Traditional)"
+            },
+            "auto": {
+                "en": "English (auto-generated)"
+            }
+        }
+        mock_ydl_instance.extract_info.assert_called_once_with(test_url, download=False)
+
+def test_list_subtitles_failure():
+    """Test that VideoDownloadError is raised if list_subtitles fails."""
+    test_url = "https://www.youtube.com/watch?v=mocked"
+    
+    with patch("yt_dlp.YoutubeDL") as mock_ydl_class:
+        mock_ydl_instance = MagicMock()
+        mock_ydl_class.return_value.__enter__.return_value = mock_ydl_instance
+        mock_ydl_instance.extract_info.side_effect = Exception("Some extraction error")
+        
+        with pytest.raises(VideoDownloadError) as exc_info:
+            VideoDownloader.list_subtitles(test_url)
+            
+        assert "Failed to retrieve subtitles list" in str(exc_info.value)
+

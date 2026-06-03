@@ -4,7 +4,7 @@ import argparse
 import shutil
 import tempfile
 
-from src.downloader import VideoDownloader
+from src.downloader import VideoDownloader, VideoDownloadError
 from src.transcriber import SubtitleTranscriber
 from src.detector import SlideDetector
 from src.generator import PDFGenerator
@@ -20,24 +20,77 @@ def main() -> None:
         description="video-to-ai-friendly-notes: Transform any lecture video into highly structured, "
                     "AI-friendly PDFs containing synchronized slides and transcripts."
     )
-    # Mutually exclusive group: requires either a YouTube URL or a Local Video path
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("-u", "--url", help="YouTube video URL to download.")
-    group.add_argument("-i", "--input", help="Local video file path.")
+    
+    # Mode Options
+    mode_group = parser.add_argument_group(
+        "Mode Options (模式選擇)",
+        "Select the primary operation mode. If --list-subs is specified, the pipeline will only list available subtitles on YouTube and exit."
+    )
+    mode_group.add_argument(
+        "--list-subs",
+        action="store_true",
+        help="List available subtitles (manual and automatic) for the YouTube video URL and exit."
+    )
 
-    parser.add_argument("-o", "--output", default="outputs/pdf/lecture_notes.pdf", help="Output destination PDF path.")
-    parser.add_argument("-m", "--model", default="medium", help="Whisper model size (tiny, base, small, medium, large-v3).")
-    parser.add_argument("-l", "--lang", default="zh", help="Language code (e.g. zh, en).")
-    parser.add_argument("-t", "--threshold", default="auto", help="Slide change detection MAE threshold (float value, or 'auto' for dynamic thresholding).")
-    parser.add_argument("-d", "--device", default="cpu", help="Computation device to use ('cpu' or 'cuda').")
-    parser.add_argument("--subs-from-yt", default=None, help="Download specified subtitle language from YouTube directly (e.g., zh-TW), skipping Whisper.")
-    parser.add_argument("--max-res", type=int, default=720, help="Maximum video resolution height to download (e.g., 480, 720, 1080).")
-    parser.add_argument("--time-range", default=None, help="Download a specific section of the video in HH:MM:SS-HH:MM:SS format.")
-    parser.add_argument("--srt", default=None, help="Path to a local .srt or .vtt subtitle file, skipping Whisper and YouTube subtitle downloads.")
-    parser.add_argument("--min-duration", type=float, default=1.0, help="Minimum slide duration cooldown in seconds between two slide transitions (default: 1.0).")
-    parser.add_argument("--slide-mode", default="final", choices=["final", "all", "first"], help="Slide animation capture strategy (default: final).")
+    # Input Options
+    input_group = parser.add_argument_group("Input Options (輸入來源，必選其一)")
+    ex_group = input_group.add_mutually_exclusive_group(required=True)
+    ex_group.add_argument("-u", "--url", help="YouTube video URL to download.")
+    ex_group.add_argument("-i", "--input", help="Local video file path.")
+
+    # Pipeline Options
+    pipeline_group = parser.add_argument_group(
+        "Pipeline Options (講義生成參數，僅在非 --list-subs 模式下生效)",
+        "Configure the slide detection, Whisper transcription, and PDF compilation settings."
+    )
+    pipeline_group.add_argument("-o", "--output", default="outputs/pdf/lecture_notes.pdf", help="Output destination PDF path.")
+    pipeline_group.add_argument("-m", "--model", default="medium", help="Whisper model size (tiny, base, small, medium, large-v3).")
+    pipeline_group.add_argument("-l", "--lang", default="zh", help="Language code (e.g. zh, en).")
+    pipeline_group.add_argument("-t", "--threshold", default="auto", help="Slide change detection MAE threshold (float value, or 'auto' for dynamic thresholding).")
+    pipeline_group.add_argument("-d", "--device", default="cpu", help="Computation device to use ('cpu' or 'cuda').")
+    pipeline_group.add_argument("--subs-from-yt", default=None, help="Download specified subtitle language from YouTube directly (e.g., zh-TW), skipping Whisper.")
+    pipeline_group.add_argument("--max-res", type=int, default=720, help="Maximum video resolution height to download (e.g., 480, 720, 1080).")
+    pipeline_group.add_argument("--time-range", default=None, help="Download a specific section of the video in HH:MM:SS-HH:MM:SS format.")
+    pipeline_group.add_argument("--srt", default=None, help="Path to a local .srt or .vtt subtitle file, skipping Whisper and YouTube subtitle downloads.")
+    pipeline_group.add_argument("--min-duration", type=float, default=1.0, help="Minimum slide duration cooldown in seconds between two slide transitions (default: 1.0).")
+    pipeline_group.add_argument("--slide-mode", default="final", choices=["final", "all", "first"], help="Slide animation capture strategy (default: final).")
 
     args = parser.parse_args()
+
+    # Basic validation & foolproofing for --list-subs mode
+    if args.list_subs:
+        if not args.url:
+            parser.error("--list-subs is only supported with a YouTube URL (-u/--url), not a local video file (-i/--input).")
+        
+        print(f"[*] Fetching available subtitles for YouTube URL: {args.url}...")
+        try:
+            subs = VideoDownloader.list_subtitles(args.url)
+            manual_subs = subs.get("manual", {})
+            auto_subs = subs.get("auto", {})
+            
+            print("\n==================================================")
+            print("Available Subtitles / Captions")
+            print("==================================================")
+            
+            print("\n[Manual Subtitles (手動建立字幕)]")
+            if manual_subs:
+                for lang_code, lang_name in sorted(manual_subs.items()):
+                    print(f"  - {lang_code}: {lang_name}")
+            else:
+                print("  None (無)")
+                
+            print("\n[Automatic Captions (自動語音識別字幕)]")
+            if auto_subs:
+                for lang_code, lang_name in sorted(auto_subs.items()):
+                    print(f"  - {lang_code}: {lang_name}")
+            else:
+                print("  None (無)")
+            print("==================================================\n")
+            sys.exit(0)
+        except VideoDownloadError as e:
+            print(f"[-] Error listing subtitles: {str(e)}", file=sys.stderr)
+            sys.exit(1)
+
 
     # Smart Directory Dispatcher: Isolate output files based on types under outputs/ namespace
     target_output = args.output

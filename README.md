@@ -126,12 +126,17 @@ python3 -m src.main --help
 
 ### 1. Process from YouTube Video URL
 ```bash
-python3 -m src.main -u "https://www.youtube.com/watch?v=aqz-KE-bpKQ" -o lecture_notes.pdf -m tiny -l zh
+python3 -m src.main -u "https://www.youtube.com/watch?v=xxx" -o lecture_notes.pdf -m tiny -l zh
 ```
 
 ### 2. Process from Local Video File
 ```bash
 python3 -m src.main -i "path/to/lecture.mp4" -o output_notes.pdf -t 15.0
+```
+
+### 3. List Available Subtitles from YouTube
+```bash
+python3 -m src.main -u "https://www.youtube.com/watch?v=xxx" --list-subs
 ```
 
 > [!NOTE]  
@@ -145,6 +150,7 @@ python3 -m src.main -i "path/to/lecture.mp4" -o output_notes.pdf -t 15.0
 | :--- | :--- | :--- | :--- |
 | `-u` | `--url` | *None* | YouTube lecture video URL to download (mutually exclusive with `-i`). |
 | `-i` | `--input` | *None* | Path to a local video file (mutually exclusive with `-u`). |
+| *None* | `--list-subs` | *None* | List available subtitles (manual and automatic) on YouTube for the URL and exit (only works with `-u/--url`). |
 | `-o` | `--output` | `outputs/lecture_notes.pdf` | Destination path for the final PDF note (and companion `.srt` subtitles, directory will be created automatically if missing). |
 | `-m` | `--model` | `medium` | Whisper model size (`tiny`, `base`, `small`, `medium`, `large-v3`). |
 | `-l` | `--lang` | `zh` | Language code (default `zh` triggers Traditional Chinese prompt). |

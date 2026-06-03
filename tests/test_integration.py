@@ -488,5 +488,62 @@ def test_local_srt_failure(tmp_path):
         with pytest.raises((ValueError, FileNotFoundError, SystemExit, RuntimeError)):
             main()
 
+def test_cli_list_subs_success():
+    """Test running CLI with --list-subs and a YouTube URL successfully lists subtitles and exits."""
+    test_args = [
+        "src.main",
+        "--url", "https://www.youtube.com/watch?v=mocked",
+        "--list-subs"
+    ]
+    
+    with patch("sys.argv", test_args), \
+         patch("src.downloader.VideoDownloader.list_subtitles") as mock_list_subs, \
+         pytest.raises(SystemExit) as exc_info:
+        
+        mock_list_subs.return_value = {
+            "manual": {"en": "English", "zh-TW": "Chinese (Traditional)"},
+            "auto": {"en": "English (auto-generated)"}
+        }
+        
+        main()
+        
+    assert exc_info.value.code == 0
+    mock_list_subs.assert_called_once_with("https://www.youtube.com/watch?v=mocked")
+
+def test_cli_list_subs_invalid_input():
+    """Test that --list-subs raises a parser error if called with a local input file instead of a URL."""
+    test_args = [
+        "src.main",
+        "--input", "lecture.mp4",
+        "--list-subs"
+    ]
+    
+    with patch("sys.argv", test_args), \
+         pytest.raises(SystemExit) as exc_info:
+        
+        main()
+        
+    assert exc_info.value.code != 0
+
+def test_cli_list_subs_failure():
+    """Test that CLI exits with code 1 if list_subtitles raises VideoDownloadError."""
+    from src.downloader import VideoDownloadError
+    test_args = [
+        "src.main",
+        "--url", "https://www.youtube.com/watch?v=mocked",
+        "--list-subs"
+    ]
+    
+    with patch("sys.argv", test_args), \
+         patch("src.downloader.VideoDownloader.list_subtitles") as mock_list_subs, \
+         pytest.raises(SystemExit) as exc_info:
+        
+        mock_list_subs.side_effect = VideoDownloadError("Failed to fetch")
+        
+        main()
+        
+    assert exc_info.value.code == 1
+
+
 
 

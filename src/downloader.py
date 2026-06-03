@@ -132,3 +132,46 @@ class VideoDownloader:
                 return video_path, subtitle_path
         except yt_dlp.utils.DownloadError as e:
             raise VideoDownloadError(f"Failed to download video from {url}: {str(e)}") from e
+
+    @staticmethod
+    def list_subtitles(url: str) -> dict[str, dict[str, str]]:
+        """Retrieve lists of available manual subtitles and automatic captions for the given URL.
+
+        Args:
+            url: The YouTube video URL to query.
+
+        Returns:
+            A dictionary containing:
+            {
+                "manual": {lang_code: lang_name, ...},
+                "auto": {lang_code: lang_name, ...}
+            }
+
+        Raises:
+            VideoDownloadError: If fetching metadata fails.
+        """
+        ydl_opts = {
+            'noplaylist': True,
+            'extract_flat': False,
+        }
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=False)
+                
+                def format_subs(sub_dict):
+                    formatted = {}
+                    if sub_dict:
+                        for lang, formats in sub_dict.items():
+                            name = formats[0].get('name') if formats else lang
+                            if not name:
+                                name = lang
+                            formatted[lang] = name
+                    return formatted
+
+                return {
+                    "manual": format_subs(info.get('subtitles')),
+                    "auto": format_subs(info.get('automatic_captions'))
+                }
+        except Exception as e:
+            raise VideoDownloadError(f"Failed to retrieve subtitles list: {str(e)}") from e
+

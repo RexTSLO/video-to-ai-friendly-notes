@@ -126,12 +126,17 @@ python3 -m src.main --help
 
 ### 1. 使用 YouTube 影片 URL 生成講義
 ```bash
-python3 -m src.main -u "https://www.youtube.com/watch?v=aqz-KE-bpKQ" -o lecture_notes.pdf -m tiny -l zh
+python3 -m src.main -u "https://www.youtube.com/watch?v=xxx" -o lecture_notes.pdf -m tiny -l zh
 ```
 
 ### 2. 使用本地影片檔案生成講義
 ```bash
 python3 -m src.main -i "path/to/lecture.mp4" -o output_notes.pdf -t 15.0
+```
+
+### 3. 查詢 YouTube 影片上可下載的字幕列表
+```bash
+python3 -m src.main -u "https://www.youtube.com/watch?v=xxx" --list-subs
 ```
 
 > [!NOTE]  
@@ -145,6 +150,7 @@ python3 -m src.main -i "path/to/lecture.mp4" -o output_notes.pdf -t 15.0
 | :--- | :--- | :--- | :--- |
 | `-u` | `--url` | *None* | YouTube 課程影片的 URL（與 `-i` 互斥，兩者必填其一） |
 | `-i` | `--input` | *None* | 本地影片的檔案路徑（與 `-u` 互斥，兩者必填其一） |
+| *無* | `--list-subs` | *None* | 查詢並列出 YouTube 影片上所有可下載的手動與自動生成字幕列表，隨後立即退出（僅適用於 `-u/--url`）。 |
 | `-o` | `--output` | `outputs/lecture_notes.pdf` | 生成的 PDF 講義路徑（同名 `.srt` 字幕亦會隨之輸出，若目錄不存在會自動為您建立） |
 | `-m` | `--model` | `medium` | `faster-whisper` 的模型大小（支援 `tiny`, `base`, `small`, `medium`, `large-v3`） |
 | `-l` | `--lang` | `zh` | 語音轉譯的語系代碼（預設 `zh` 會自動帶入繁體中文優化 prompt） |

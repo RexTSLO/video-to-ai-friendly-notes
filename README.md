@@ -124,19 +124,19 @@ Run the master orchestrator CLI script to execute the entire pipeline with a sin
 python3 -m src.main --help
 ```
 
-### 1. Process from YouTube Video URL
-```bash
-python3 -m src.main -u "https://www.youtube.com/watch?v=xxx" -o lecture_notes.pdf -m tiny -l zh
-```
-
-### 2. Process from Local Video File
-```bash
-python3 -m src.main -i "path/to/lecture.mp4" -o output_notes.pdf -t 15.0
-```
-
-### 3. List Available Subtitles from YouTube
+### 1. List Available Subtitles from YouTube
 ```bash
 python3 -m src.main -u "https://www.youtube.com/watch?v=xxx" --list-subs
+```
+
+### 2. Process from YouTube Video URL
+```bash
+python3 -m src.main -u "https://www.youtube.com/watch?v=xxx" -o lecture_notes.pdf --subs-from-yt zh-TW
+```
+
+### 3. Process from Local Video File
+```bash
+python3 -m src.main -i "path/to/lecture.mp4" -o output_notes.pdf -m medium -l zh
 ```
 
 > [!NOTE]  

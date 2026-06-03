@@ -124,19 +124,18 @@
 python3 -m src.main --help
 ```
 
-### 1. 使用 YouTube 影片 URL 生成講義
-```bash
-python3 -m src.main -u "https://www.youtube.com/watch?v=xxx" -o lecture_notes.pdf -m tiny -l zh
-```
-
-### 2. 使用本地影片檔案生成講義
-```bash
-python3 -m src.main -i "path/to/lecture.mp4" -o output_notes.pdf -t 15.0
-```
-
-### 3. 查詢 YouTube 影片上可下載的字幕列表
+### 1. 查詢 YouTube 影片上可下載的字幕列表
 ```bash
 python3 -m src.main -u "https://www.youtube.com/watch?v=xxx" --list-subs
+```
+### 2. 使用 YouTube 影片 URL 生成講義
+```bash
+python3 -m src.main -u "https://www.youtube.com/watch?v=xxx" -o lecture_notes.pdf --subs-from-yt zh-TW
+```
+
+### 3. 使用本地影片檔案生成講義
+```bash
+python3 -m src.main -i "path/to/lecture.mp4" -o output_notes.pdf -m medium -l zh
 ```
 
 > [!NOTE]  

@@ -15,7 +15,7 @@ def test_cli_help_flag():
         text=True
     )
     assert result.returncode == 0
-    assert "video-to-ai-friendly-notes" in result.stdout or "usage:" in result.stdout
+    assert "video-slide-notes" in result.stdout or "usage:" in result.stdout
 
 
 def test_orchestration_pipeline_mocked(tmp_path):

@@ -10,14 +10,14 @@ from src.detector import SlideDetector
 from src.generator import PDFGenerator
 
 def main() -> None:
-    """The master orchestrator CLI entrypoint for the video-to-ai-friendly-notes pipeline.
+    """The master orchestrator CLI entrypoint for the video-slide-notes pipeline.
 
     Manages parameters parsing, setting up sandbox environments, sequential pipeline execution,
     and automatic cleanup of intermediate workspaces.
     """
     parser = argparse.ArgumentParser(
-        prog="video-to-ai-friendly-notes",
-        description="video-to-ai-friendly-notes: Transform any lecture video into highly structured, "
+        prog="video-slide-notes",
+        description="video-slide-notes: Transform any lecture video into highly structured, "
                     "AI-friendly PDFs containing synchronized slides and transcripts."
     )
     

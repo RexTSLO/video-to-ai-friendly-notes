@@ -1,4 +1,6 @@
-# video-to-ai-friendly-notes
+# video-slide-notes
+
+### 🤖 AI-friendly Video Lecture Notes Generator
 
 **English** | [繁體中文](README.zh-TW.md)
 
@@ -6,7 +8,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Tests Passed](https://img.shields.io/badge/tests-25%20passed-success.svg)](#unit--integration-testing)
 
-`video-to-ai-friendly-notes` is a modular, lightweight, and efficient Python tool. Simply provide a YouTube URL or a local video file, and it will automatically **download the video, extract slide frames, transcribe the speech, and align them**. The result is a **structured PDF study guide optimized for both human reading and AI/RAG (such as Google NotebookLM) ingestion**.
+`video-slide-notes` is an AI-friendly, modular, lightweight, and efficient Python tool. Simply provide a YouTube URL or a local video file, and it will automatically **download the video, extract slide frames, transcribe the speech, and align them**. The result is a **structured PDF study guide optimized for both human reading and AI/RAG (such as Google NotebookLM) ingestion**.
 
 ---
 
@@ -26,13 +28,13 @@
 
 ## 🎬 Showcase
 
-Below are showcases demonstrating how `video-to-ai-friendly-notes` processes different subtitle flows to generate structured notes. Placeholders are set up below for your actual video assets and generated PDFs:
+Below are showcases demonstrating how `video-slide-notes` processes different subtitle flows to generate structured notes. Placeholders are set up below for your actual video assets and generated PDFs:
 
 ### 1. Processing Official YouTube Subtitles (YT Manual Subtitles)
 Designed for long-form lecture videos (e.g., 1+ hour courses). Directly downloads officially curated and proofread Traditional Chinese subtitles via `--subs-from-yt zh-TW`. **Skips local AI inference time**, delivering fast compilation with semantic structure and alignment.
 *   **Best Suited For**: Long-form academic lectures, major developer conferences (e.g., Google I/O, WWDC), or online courses (Coursera, edX) that come with high-quality, pre-uploaded official subtitles.
 *   **Video Source**: [Harness Engineering: Sometimes language models are not unintelligent, they just lack proper human guidance](https://www.youtube.com/watch?v=R6fZR_9kmIw)
-*   **Generated PDF**: [v0.1.0_assets_1.pdf](https://github.com/RexTSLO/video-to-ai-friendly-notes/releases/download/v0.1.0/v0.1.0_assets_1.pdf)
+*   **Generated PDF**: [v0.1.0_assets_1.pdf](https://github.com/RexTSLO/video-slide-notes/releases/download/v0.1.0/v0.1.0_assets_1.pdf)
 *   **Visual Comparison**:
     | Original Video Frame | Structured Slide & Synced Subtitles |
     | :---: | :---: |
@@ -87,8 +89,8 @@ This project utilizes `ffmpeg` for extracting and processing audio streams. Plea
 
 1.  **Clone the Repository**:
     ```bash
-    git clone https://github.com/rextslo/video-to-ai-friendly-notes.git
-    cd video-to-ai-friendly-notes
+    git clone https://github.com/rextslo/video-slide-notes.git
+    cd video-slide-notes
     ```
 
 2.  **Create and Activate Virtual Environment**:
@@ -178,7 +180,7 @@ For maximum privacy, the `--cookies-from-browser` feature of `yt-dlp` is current
 ## 📂 Repository File Tree
 
 ```text
-video-to-ai-friendly-notes/
+video-slide-notes/
 ├── LICENSE             # MIT License
 ├── requirements.txt    # Project Python packages
 ├── inputs/             # Successfully downloaded videos

@@ -1,4 +1,6 @@
-# video-to-ai-friendly-notes
+# video-slide-notes
+
+### 🤖 AI-friendly 影片講義生成器
 
 [English](README.md) | **繁體中文**
 
@@ -6,7 +8,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Tests Passed](https://img.shields.io/badge/tests-25%20passed-success.svg)](#單元與整合測試)
 
-`video-to-ai-friendly-notes` 是一個模組化、輕量且高效的 Python 工具。只需輸入一個 YouTube 連結或本地影片，它就能自動**下載影片、擷取投影片畫面、將語音轉為逐字稿，並將圖文對齊編排**。最終為您生成一份**適合人類閱讀與 AI/RAG（如 Google NotebookLM）解析的結構化 PDF 講義筆記**。
+`video-slide-notes` 是一個 AI-friendly、模組化、輕量且高效的 Python 工具。只需輸入一個 YouTube 連結或本地影片，它就能自動**下載影片、擷取投影片畫面、將語音轉為逐字稿，並將圖文對齊編排**。最終為您生成一份**適合人類閱讀與 AI/RAG（如 Google NotebookLM）解析的結構化 PDF 講義筆記**。
 
 ---
 
@@ -27,13 +29,13 @@
 
 ## 🎬 使用範例 (Showcase)
 
-以下展示了三種不同字幕處理路徑下的實際影片與產出講義對比，協助您了解 `video-to-ai-friendly-notes` 在不同情境下的使用方法：
+以下展示了三種不同字幕處理路徑下的實際影片與產出講義對比，協助您了解 `video-slide-notes` 在不同情境下的使用方法：
 
 ### 1. 載入手動建立的 YouTube 官方字幕 (YT Manual Subtitles)
 針對長時間影片（例如 1 小時以上的演講或課程），直接使用 `--subs-from-yt zh-TW` 下載手動校對的官方繁體中文字幕。**跳過本地 AI 轉譯時間**，生成具備高結構化排版與時間軸對齊的 PDF 筆記。
 *   **適合影片類型**：有官方精心翻譯/校對字幕的長時間學術演講、大型開發者大會（如 Google I/O、WWDC）、Coursera 或 edX 等線上課程影片。
 *   **示範影片**：[Harness Engineering：有時候語言模型不是不夠聰明，只是沒有人類好好引導](https://www.youtube.com/watch?v=R6fZR_9kmIw)
-*   **產出 PDF**：[v0.1.0_assets_1.pdf](https://github.com/RexTSLO/video-to-ai-friendly-notes/releases/download/v0.1.0/v0.1.0_assets_1.pdf)
+*   **產出 PDF**：[v0.1.0_assets_1.pdf](https://github.com/RexTSLO/video-slide-notes/releases/download/v0.1.0/v0.1.0_assets_1.pdf)
 *   **效果展示**：
     | 原始影片畫面 | 產出之完成版投影片與字幕對齊 |
     | :---: | :---: |
@@ -90,8 +92,8 @@
 
 1.  **複製儲存庫**：
     ```bash
-    git clone https://github.com/rextslo/video-to-ai-friendly-notes.git
-    cd video-to-ai-friendly-notes
+    git clone https://github.com/rextslo/video-slide-notes.git
+    cd video-slide-notes
     ```
 
 2.  **建立並啟用虛擬環境**：
@@ -180,7 +182,7 @@ python3 -m src.main -i "path/to/lecture.mp4" -o output_notes.pdf -m medium -l zh
 ## 📂 專案目錄結構
 
 ```text
-video-to-ai-friendly-notes/
+video-slide-notes/
 ├── LICENSE             # MIT 授權條款
 ├── requirements.txt    # 專案依賴描述
 ├── inputs/             # 存放下載完成的影片

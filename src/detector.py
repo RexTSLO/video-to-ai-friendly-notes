@@ -8,17 +8,19 @@ class SlideDetector:
     based on frame difference analysis.
     """
 
-    def __init__(self, threshold: float | str = "auto", min_slide_duration: float = 1.0, slide_mode: str = "final") -> None:
+    def __init__(self, threshold: float | str = "auto", min_slide_duration: float = 1.0, slide_mode: str = "final", skip_talking_heads: bool = False) -> None:
         """Initialize the SlideDetector with sensitivity thresholds and duration cooldowns.
 
         Args:
             threshold: Mean Absolute Error threshold above which a frame is marked as a slide change, or "auto".
             min_slide_duration: Cooldown duration in seconds between two slide transitions.
             slide_mode: Strategy for slide animations ("final", "all", "first").
+            skip_talking_heads: Whether to skip duplicate speaker talking head frames.
         """
         self.threshold = threshold
         self.min_slide_duration = min_slide_duration
         self.slide_mode = slide_mode
+        self.skip_talking_heads = skip_talking_heads
 
     def _calculate_diff(self, frame_a: np.ndarray, frame_b: np.ndarray) -> float:
         """Calculate the Mean Absolute Error (MAE) difference between two frames.
@@ -47,6 +49,92 @@ class SlideDetector:
         """Grayscale and downscale a frame to 160x90 for fast similarity comparison."""
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         return cv2.resize(gray, (160, 90))
+
+    def _get_face_detector(self, frame_width: int, frame_height: int):
+        """Lazy initialization of the YuNet face detector, downloading model if missing."""
+        if not hasattr(self, "_detector") or self._detector is None:
+            model_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "models"))
+            os.makedirs(model_dir, exist_ok=True)
+            model_path = os.path.join(model_dir, "face_detection_yunet_2023mar.onnx")
+
+            if not os.path.exists(model_path):
+                import urllib.request
+                url = "https://huggingface.co/opencv/face_detection_yunet/resolve/main/face_detection_yunet_2023mar.onnx"
+                try:
+                    print(f"[*] Downloading YuNet face detection model from {url}...")
+                    urllib.request.urlretrieve(url, model_path)  # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected
+                    print("[+] YuNet model downloaded successfully.")
+                except Exception as e:
+                    print(f"[-] WARNING: Failed to download YuNet model: {e}")
+                    self._detector = None
+                    return None
+
+            try:
+                self._detector = cv2.FaceDetectorYN.create(
+                    model_path,
+                    "",
+                    (frame_width, frame_height),
+                    0.8,
+                    0.3,
+                    5000
+                )
+                self._detector_size = (frame_width, frame_height)
+            except Exception as e:
+                print(f"[-] WARNING: Failed to initialize YuNet face detector: {e}")
+                self._detector = None
+                return None
+        else:
+            if self._detector_size != (frame_width, frame_height):
+                try:
+                    self._detector.setInputSize((frame_width, frame_height))
+                    self._detector_size = (frame_width, frame_height)
+                except Exception as e:
+                    print(f"[-] WARNING: Failed to update YuNet input size: {e}")
+                    return None
+
+        return self._detector
+
+    def _is_talking_head_frame(self, frame: np.ndarray) -> bool:
+        """Detect if the frame represents a talking head (speaker face) rather than a slide.
+
+        Uses YuNet to detect faces. If any face area is larger than 5% of the frame area,
+        it is considered a talking head.
+        """
+        if not self.skip_talking_heads:
+            return False
+
+        h, w = frame.shape[:2]
+        detector = self._get_face_detector(w, h)
+        if detector is None:
+            return False
+
+        try:
+            retval, faces = detector.detect(frame)
+            if retval and faces is not None:
+                frame_area = w * h
+                for face in faces:
+                    face_w = face[2]
+                    face_h = face[3]
+                    face_area = face_w * face_h
+                    if (face_area / frame_area) >= 0.01:
+                        return True
+        except Exception as e:
+            # Silently fallback to False on detection failure
+            pass
+
+        return False
+
+    def _save_keyframe(self, frame: np.ndarray, timestamp: float, output_img_dir: str, keyframes: list[dict]) -> None:
+        """Helper to write keyframe to disk and append to keyframes list."""
+        img_name = f"slide_{timestamp:.2f}.jpg"
+        img_path = os.path.abspath(os.path.join(output_img_dir, img_name))
+        cv2.imwrite(img_path, frame, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
+        keyframes.append({
+            "timestamp": timestamp,
+            "image_path": img_path,
+            "frame_resized_gray": self._get_resized_gray(frame)
+        })
+
 
     def consolidate_keyframes(self, keyframes: list[dict], similarity_threshold: float = 10.0) -> list[dict]:
         """Consolidate adjacent slide builds (animations) depending on self.slide_mode.
@@ -193,6 +281,7 @@ class SlideDetector:
         # Anti-ghosting variables (Optimized Feature 1 & 2)
         transition_pending = False
         pending_transition_time = 0.0
+        in_talking_head = False
 
         # Iterate through the video sampling at 1 frame per second interval
         for frame_idx in range(0, total_frames, sample_interval):
@@ -208,11 +297,10 @@ class SlideDetector:
                 # Standard deviation < 5.0 indicates a single solid color screen (no content)
                 if np.std(frame) >= 5.0:
                     prev_frame = frame.copy()
-                    img_name = "slide_0.00.jpg"
-                    img_path = os.path.abspath(os.path.join(output_img_dir, img_name))
-                    cv2.imwrite(img_path, frame, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
-                    keyframes.append({"timestamp": 0.0, "image_path": img_path, "frame_resized_gray": self._get_resized_gray(frame)})
+                    is_talking_head = self._is_talking_head_frame(frame)
+                    self._save_keyframe(frame, 0.0, output_img_dir, keyframes)
                     last_transition_time = 0.0
+                    in_talking_head = is_talking_head
                 continue
 
             diff = self._calculate_diff(prev_frame, frame)
@@ -222,29 +310,49 @@ class SlideDetector:
             if transition_pending and (diff < threshold_val or (current_time - pending_transition_time) >= 2.0):
                 # Ensure the stabilized frame is not a solid blank screen
                 if np.std(frame) >= 5.0:
-                    img_name = f"slide_{pending_transition_time:.2f}.jpg"
-                    img_path = os.path.abspath(os.path.join(output_img_dir, img_name))
-                    cv2.imwrite(img_path, frame, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
-                    keyframes.append({"timestamp": pending_transition_time, "image_path": img_path, "frame_resized_gray": self._get_resized_gray(frame)})
-                    last_transition_time = pending_transition_time
+                    is_talking_head = self._is_talking_head_frame(frame)
+                    if is_talking_head:
+                        if not in_talking_head:
+                            self._save_keyframe(frame, pending_transition_time, output_img_dir, keyframes)
+                            last_transition_time = pending_transition_time
+                            in_talking_head = True
+                    else:
+                        self._save_keyframe(frame, pending_transition_time, output_img_dir, keyframes)
+                        last_transition_time = pending_transition_time
+                        in_talking_head = False
                 transition_pending = False
 
             # 2. Check for new transition trigger (MAE exceeds threshold and cooldown has passed)
-            elif diff > threshold_val and (current_time - last_transition_time) >= self.min_slide_duration:
-                # Flag transition pending, wait for next frame to stabilize to avoid blurry animations
-                transition_pending = True
-                pending_transition_time = current_time
+            elif not transition_pending and (current_time - last_transition_time) >= self.min_slide_duration:
+                if in_talking_head:
+                    # Check if we have exited the talking head state
+                    is_talking_head = self._is_talking_head_frame(frame)
+                    if not is_talking_head:
+                        in_talking_head = False
+                        if diff > threshold_val:
+                            transition_pending = True
+                            pending_transition_time = current_time
+                else:
+                    if diff > threshold_val:
+                        # Flag transition pending, wait for next frame to stabilize to avoid blurry animations
+                        transition_pending = True
+                        pending_transition_time = current_time
 
             prev_frame = frame.copy()
 
         # Defensive final frame flush in case video ends on a pending transition
         if transition_pending and prev_frame is not None:
             if np.std(prev_frame) >= 5.0:
-                img_name = f"slide_{pending_transition_time:.2f}.jpg"
-                img_path = os.path.abspath(os.path.join(output_img_dir, img_name))
-                cv2.imwrite(img_path, prev_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
-                keyframes.append({"timestamp": pending_transition_time, "image_path": img_path, "frame_resized_gray": self._get_resized_gray(prev_frame)})
-                last_transition_time = pending_transition_time
+                is_talking_head = self._is_talking_head_frame(prev_frame)
+                if is_talking_head:
+                    if not in_talking_head:
+                        self._save_keyframe(prev_frame, pending_transition_time, output_img_dir, keyframes)
+                        last_transition_time = pending_transition_time
+                        in_talking_head = True
+                else:
+                    self._save_keyframe(prev_frame, pending_transition_time, output_img_dir, keyframes)
+                    last_transition_time = pending_transition_time
+                    in_talking_head = False
 
         # 3. Automatic tail-frame capture (Optimized Feature 3)
         # Append the final frame if it is distant enough from the last transition to protect tail slides
@@ -254,10 +362,9 @@ class SlideDetector:
             cap.set(cv2.CAP_PROP_POS_FRAMES, final_frame_idx)
             ret, frame = cap.read()
             if ret and np.std(frame) >= 5.0:
-                img_name = f"slide_{final_time:.2f}.jpg"
-                img_path = os.path.abspath(os.path.join(output_img_dir, img_name))
-                cv2.imwrite(img_path, frame, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
-                keyframes.append({"timestamp": final_time, "image_path": img_path, "frame_resized_gray": self._get_resized_gray(frame)})
+                is_talking_head = self._is_talking_head_frame(frame)
+                if not (in_talking_head and is_talking_head):
+                    self._save_keyframe(frame, final_time, output_img_dir, keyframes)
 
         cap.release()
         return self.consolidate_keyframes(keyframes)

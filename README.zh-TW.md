@@ -174,6 +174,8 @@ python3 -m src.main -i "path/to/lecture.mp4" -o output_notes.pdf -m medium -l zh
 | *無* | `--cookies` | *None* | 指定 Netscape 格式的 Cookie 檔案路徑（用於規避 YouTube 429 頻率限制錯誤）。 |
 | *無* | `--min-duration` | `1.0` | 兩次投影片切換之間的最小冷卻秒數（越低越能捕捉快速切換的投影片）。 |
 | *無* | `--slide-mode` | `final` | 投影片動畫擷取策略（`final` 只保留最終動畫完成版、`all` 擷取所有步驟、`first` 只保留初始無動畫版） |
+| *無* | `--skip-talking-heads` | `False` | 啟用 YuNet CNN 人臉偵測，自動辨識並過濾重複的主講人純人像影格（每段人像只擷取第一張，直到下一次投影片出現）。 |
+
 
 
 

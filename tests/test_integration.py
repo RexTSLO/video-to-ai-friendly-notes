@@ -108,7 +108,12 @@ def test_orchestration_pipeline_mocked(tmp_path):
         mock_transcriber_instance.write_srt.assert_called_once_with(dummy_subs, expected_srt)
 
         # 4. SlideDetector called and detect_slides executed with custom threshold
-        mock_detector_class.assert_called_once_with(threshold="12.0", min_slide_duration=1.0, slide_mode="final")
+        mock_detector_class.assert_called_once_with(
+            threshold="12.0",
+            min_slide_duration=1.0,
+            slide_mode="final",
+            skip_talking_heads=False
+        )
         mock_detector_instance.detect_slides.assert_called_once_with(expected_final_video, expected_slides_dir)
 
         # 5. PDFGenerator called and generate executed in the isolated pdf/ namespace

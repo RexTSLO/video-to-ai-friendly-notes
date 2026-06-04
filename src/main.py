@@ -54,6 +54,11 @@ def main() -> None:
     pipeline_group.add_argument("--srt", default=None, help="Path to a local .srt or .vtt subtitle file, skipping Whisper and YouTube subtitle downloads.")
     pipeline_group.add_argument("--min-duration", type=float, default=1.0, help="Minimum slide duration cooldown in seconds between two slide transitions (default: 1.0).")
     pipeline_group.add_argument("--slide-mode", default="final", choices=["final", "all", "first"], help="Slide animation capture strategy (default: final).")
+    pipeline_group.add_argument(
+        "--skip-talking-heads",
+        action="store_true",
+        help="Skip capturing duplicate speaker talking head frames by only keeping the first one until the next slide."
+    )
 
     # Authentication Options
     auth_group = parser.add_argument_group(
@@ -220,7 +225,8 @@ def main() -> None:
         detector = SlideDetector(
             threshold=args.threshold,
             min_slide_duration=args.min_duration,
-            slide_mode=args.slide_mode
+            slide_mode=args.slide_mode,
+            skip_talking_heads=args.skip_talking_heads
         )
         keyframes = detector.detect_slides(video_path, slides_out_dir)
         print(f"[+] Extracted {len(keyframes)} slide frames saved at: {slides_out_dir}")

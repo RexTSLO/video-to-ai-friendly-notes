@@ -347,3 +347,180 @@ def test_detect_slides_edge_cases(tmp_path):
         assert keyframes[0]["timestamp"] == 0.0
         assert abs(keyframes[1]["timestamp"] - 2.9) < 1e-5
 
+
+def test_is_talking_head_frame():
+    """Test _is_talking_head_frame detection logic with mocked YuNet detector."""
+    detector = SlideDetector(skip_talking_heads=True)
+
+    # 1. When skip_talking_heads is False, it should return False immediately
+    detector_disabled = SlideDetector(skip_talking_heads=False)
+    frame = np.zeros((100, 100, 3), dtype=np.uint8)
+    assert detector_disabled._is_talking_head_frame(frame) is False
+
+    # Mock face detector creation
+    with patch.object(detector, "_get_face_detector") as mock_get_detector:
+        mock_yn_detector = MagicMock()
+        mock_get_detector.return_value = mock_yn_detector
+
+        # Case A: detector.detect returns no faces
+        mock_yn_detector.detect.return_value = (False, None)
+        assert detector._is_talking_head_frame(frame) is False
+
+        # Case B: detector.detect returns a small face (< 1% area)
+        # Bounding box: x=0, y=0, w=8, h=8 -> area = 64 on a 100x100 frame (0.64% area)
+        small_face = np.array([[0, 0, 8, 8, 0.9]])
+        mock_yn_detector.detect.return_value = (True, small_face)
+        assert detector._is_talking_head_frame(frame) is False
+
+        # Case C: detector.detect returns a large face (>= 1% area)
+        # Bounding box: x=0, y=0, w=12, h=12 -> area = 144 on a 100x100 frame (1.44% area)
+        large_face = np.array([[0, 0, 12, 12, 0.9]])
+        mock_yn_detector.detect.return_value = (True, large_face)
+        assert detector._is_talking_head_frame(frame) is True
+
+
+def test_detect_slides_with_talking_heads(tmp_path):
+    """Test detect_slides logic correctly skips duplicate talking head frames."""
+    detector = SlideDetector(threshold=15.0, min_slide_duration=1.0, skip_talking_heads=True)
+    output_dir = str(tmp_path / "keyframes_talking_head")
+
+    with patch("cv2.VideoCapture") as mock_cap_class, \
+         patch("cv2.imwrite") as mock_imwrite, \
+         patch.object(detector, "_is_talking_head_frame") as mock_is_talking_head:
+
+        mock_cap_instance = MagicMock()
+        mock_cap_instance.isOpened.return_value = True
+        mock_cap_instance.get.side_effect = lambda prop: {
+            5: 10.0,    # CAP_PROP_FPS
+            7: 40       # CAP_PROP_FRAME_COUNT (0s to 3s)
+        }.get(prop, 0.0)
+        mock_cap_class.return_value = mock_cap_instance
+        mock_imwrite.return_value = True
+
+        # Generate test frames (non-blank)
+        np.random.seed(42)
+        frame_slide = np.random.randint(10, 40, (100, 100, 3), dtype=np.uint8)
+        frame_talking = np.random.randint(210, 240, (100, 100, 3), dtype=np.uint8)
+
+        current_frame_idx = [0]
+        def mock_set(prop, val):
+            if prop == 1:
+                current_frame_idx[0] = int(val)
+            return True
+        mock_cap_instance.set.side_effect = mock_set
+
+        # Mock frame profile:
+        # 0.0s (idx 0): Slide 1
+        # 1.0s (idx 10): Speaker face starts (transition!)
+        # 2.0s (idx 20): Speaker face continues (with motion!)
+        # 3.0s (idx 30): Slide 2 (transition back to slide!)
+        def mock_read():
+            idx = current_frame_idx[0]
+            if idx == 0:
+                return True, frame_slide
+            elif idx == 10 or idx == 20:
+                return True, frame_talking
+            elif idx == 30:
+                return True, frame_slide
+            return False, None
+        mock_cap_instance.read.side_effect = mock_read
+
+        # Mock face detection: only frame_talking is classified as talking head
+        def mock_face_check(f):
+            return np.array_equal(f, frame_talking)
+        mock_is_talking_head.side_effect = mock_face_check
+
+        # Act
+        keyframes = detector.detect_slides("dummy.mp4", output_dir)
+
+        # Assert
+        # Expected frames captured:
+        # - 0.0s (Slide 1)
+        # - 1.0s (First speaker frame)
+        # - 2.0s (Skipped, since we are already in talking head state!)
+        # - 3.0s (Slide 2 - exited talking head state)
+        assert len(keyframes) == 3
+        assert keyframes[0]["timestamp"] == 0.0
+        assert keyframes[1]["timestamp"] == 1.0
+        assert keyframes[2]["timestamp"] == 3.0
+
+
+def test_get_face_detector():
+    """Test lazy initialization, downloading, caching and updating size of FaceDetectorYN."""
+    detector = SlideDetector(skip_talking_heads=True)
+
+    with patch("os.path.exists") as mock_exists, \
+         patch("os.makedirs") as mock_makedirs, \
+         patch("urllib.request.urlretrieve") as mock_urlretrieve, \
+         patch("cv2.FaceDetectorYN.create") as mock_create:
+
+        # Scenario 1: Model file does not exist, download succeeds
+        mock_exists.return_value = False
+        mock_detector_instance = MagicMock()
+        mock_create.return_value = mock_detector_instance
+
+        det = detector._get_face_detector(320, 240)
+        assert det == mock_detector_instance
+        mock_urlretrieve.assert_called_once()
+        mock_create.assert_called_once_with(
+            os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "models", "face_detection_yunet_2023mar.onnx")),
+            "",
+            (320, 240),
+            0.8,
+            0.3,
+            5000
+        )
+
+        # Scenario 2: Model file already exists, retrieved from cache, same size
+        mock_exists.return_value = True
+        mock_urlretrieve.reset_mock()
+        mock_create.reset_mock()
+
+        det = detector._get_face_detector(320, 240)
+        assert det == mock_detector_instance
+        mock_urlretrieve.assert_not_called()
+        mock_create.assert_not_called()
+
+        # Scenario 3: Size changes, setInputSize called
+        det = detector._get_face_detector(640, 480)
+        assert det == mock_detector_instance
+        mock_detector_instance.setInputSize.assert_called_once_with((640, 480))
+
+        # Scenario 4: setInputSize raises exception
+        mock_detector_instance.setInputSize.side_effect = Exception("Resize failed")
+        det = detector._get_face_detector(800, 600)
+        assert det is None
+
+    # Scenario 5: Download fails
+    detector_fail = SlideDetector(skip_talking_heads=True)
+    with patch("os.path.exists", return_value=False), \
+         patch("urllib.request.urlretrieve", side_effect=Exception("Network error")):
+        det = detector_fail._get_face_detector(320, 240)
+        assert det is None
+
+    # Scenario 6: Initialization fails (FaceDetectorYN.create raises exception)
+    detector_init_fail = SlideDetector(skip_talking_heads=True)
+    with patch("os.path.exists", return_value=True), \
+         patch("cv2.FaceDetectorYN.create", side_effect=Exception("Initialization failed")):
+        det = detector_init_fail._get_face_detector(320, 240)
+        assert det is None
+
+
+def test_is_talking_head_frame_errors():
+    """Test _is_talking_head_frame error conditions."""
+    detector = SlideDetector(skip_talking_heads=True)
+
+    # 1. detector is None (returns False)
+    with patch.object(detector, "_get_face_detector", return_value=None):
+        frame = np.zeros((100, 100, 3), dtype=np.uint8)
+        assert detector._is_talking_head_frame(frame) is False
+
+    # 2. detector.detect raises an exception
+    with patch.object(detector, "_get_face_detector") as mock_get:
+        mock_det = MagicMock()
+        mock_get.return_value = mock_det
+        mock_det.detect.side_effect = Exception("Detection crash")
+        assert detector._is_talking_head_frame(frame) is False
+
+
+

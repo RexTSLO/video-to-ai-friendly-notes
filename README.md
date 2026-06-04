@@ -172,6 +172,8 @@ For maximum privacy, the `--cookies-from-browser` feature of `yt-dlp` is current
 | *None* | `--cookies` | *None* | Path to a cookies file in Netscape format (useful to bypass 429 rate limit errors). |
 | *None* | `--min-duration` | `1.0` | Minimum slide duration cooldown in seconds between two slide transitions (lower = more keyframes for rapid slide changes). |
 | *None* | `--slide-mode` | `final` | Slide animation capture strategy (`final` to keep only the completed slide, `all` to capture all stages, `first` to keep only the initial state). |
+| *None* | `--skip-talking-heads` | `False` | Skip duplicate speaker talking head frames by keeping only the first one until the next slide is detected (uses YuNet CNN face detector). |
+
 
 
 

@@ -6,33 +6,37 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Tests Passed](https://img.shields.io/badge/tests-25%20passed-success.svg)](#unit--integration-testing)
+[![Tests Passed](https://img.shields.io/badge/tests-53%20passed-success.svg)](#unit--integration-testing)
 
-`video-slide-notes` is an AI-friendly, modular, lightweight, and efficient Python tool. Simply provide a YouTube URL or a local video file, and it will automatically **download the video, extract slide frames, transcribe the speech, and align them**. The result is a **structured PDF study guide optimized for both human reading and AI/RAG (such as Google NotebookLM) ingestion**.
+`video-slide-notes` is an AI-friendly, modular, lightweight, and efficient Python tool. Designed for information-dense videos such as courses, tutorials, and seminars, simply provide a YouTube URL or a local video file, and it will automatically **download the video, extract slide frames, transcribe the speech, and align them**. The result is a **structured PDF study guide optimized for both human reading and AI/RAG (such as Google NotebookLM) ingestion**.
 
 ---
 
 ## 🚀 Core Features
 
-1. **Automated Slide Capture (Slide Detector)**: Automatically detects when a slide changes and captures keyframes, filtering out transitional blur, animations, and black/blank screens. Supports **Animation Consolidation Mode** (`--slide-mode`) to merge incremental slide animations into a single finished slide, capturing complete content without creating duplicate pages.
+1. **Automated Slide Capture (Slide Detector)**:
+   * **Precise Frame Capture**: Automatically detects when a slide changes and captures keyframes, filtering out transitional blur, animations, and black/blank screens. Supports **Animation Consolidation Mode** (`--slide-mode`) to merge incremental slide animations into a single finished slide, capturing complete content without creating duplicate pages.
+   * **Speaker Portrait Filtering**: Automatically identifies and filters out repetitive speaker talking head frames, minimizing visual clutter and personal portrait interference.
+   * **Flexible Video Length Adaptation**: Handles both typical YouTube video lengths (~15 minutes) and long-duration videos (1+ hours) stably, producing formatted study notes of appropriate lengths.
 2. **Audio Transcription (Whisper Transcriber)**: Directly integrates the `faster-whisper` CTranslate2 inference engine without relying on external CLI wrappers.
 3. **Aligned Multi-modal Layout (AI & Human Friendly)**:
    * **CJK/Chinese Support**: Automatically registers CJK fonts on first run to eliminate empty square characters (glyph errors) in generated PDFs.
    * **Structured Pairing**: Pairs each slide image side-by-side with its chronological speech transcript on a page-by-page basis for easy reference.
 4. **Optimized for NotebookLM & RAG (AI-Ready)**:
-    * **Multimodal Semantic Alignment**: Pairs slide screenshots side-by-side with synchronized speech transcripts, enabling multimodal models (like Gemini Pro in NotebookLM) to ingest text and graphics simultaneously and retain deep technical context.
-    * **Precise Pagination & Chunking Anchors**: Organizes the PDF page-by-page based on slide transitions. This serves as native semantic chunking boundaries, avoiding context drift during vector search and enabling precise citations of timestamps and page numbers.
-    * **Noise Filtering & Token Efficiency**: Eliminates transition animations, duplicate keyframes, and speech filler noise, leaving only high-value slides and clean transcripts to minimize token consumption and speed up query processing.
+     * **Multimodal Semantic Alignment**: Pairs slide screenshots side-by-side with synchronized speech transcripts, enabling multimodal models (like Gemini Pro in NotebookLM) to ingest text and graphics simultaneously and retain deep technical context.
+     * **Precise Pagination & Chunking Anchors**: Organizes the PDF page-by-page based on slide transitions. This serves as native semantic chunking boundaries, avoiding context drift during vector search and enabling precise citations of timestamps and page numbers.
+     * **Noise Filtering & Token Efficiency**: Eliminates transition animations, duplicate keyframes, and speech filler noise, leaving only high-value slides and clean transcripts to minimize token consumption and speed up query processing.
 
 ---
 
 ## 🎬 Showcase
 
-Below are showcases demonstrating how `video-slide-notes` processes different subtitle flows to generate structured notes. Placeholders are set up below for your actual video assets and generated PDFs:
+Below are showcases demonstrating how `video-slide-notes` processes different subtitle flows to generate structured notes.
 
-### 1. Processing Official YouTube Subtitles (YT Manual Subtitles)
-Designed for long-form lecture videos (e.g., 1+ hour courses). Directly downloads officially curated and proofread Traditional Chinese subtitles via `--subs-from-yt zh-TW`. **Skips local AI inference time**, delivering fast compilation with semantic structure and alignment.
-*   **Best Suited For**: Long-form academic lectures, major developer conferences (e.g., Google I/O, WWDC), or online courses (Coursera, edX) that come with high-quality, pre-uploaded official subtitles.
+### 1. Slide-only Lecture Video, Curated YouTube Subtitles (YT Manual Subtitles)
+For YouTube videos with pre-uploaded manual subtitles, directly downloads official subtitles via `--subs-from-yt zh-TW`. **Skips local AI inference time**, delivering fast compilation with semantic structure and alignment.
+Defaults to `--slide-mode=final`, automatically capturing and merging incremental animations on the same slide into a single consolidated image, reducing transition pages.
+*   **Best Suited For**: Long-form academic lectures, topic-focused coding/educational videos, or online courses (Coursera, edX) that come with high-quality, pre-uploaded official subtitles.
 *   **Video Source**: [Harness Engineering: Sometimes language models are not unintelligent, they just lack proper human guidance](https://www.youtube.com/watch?v=R6fZR_9kmIw)
 *   **Generated PDF**: [v0.1.0_assets_1.pdf](https://github.com/RexTSLO/video-slide-notes/releases/download/v0.1.0/v0.1.0_assets_1.pdf)
 *   **Visual Comparison**:
@@ -48,25 +52,32 @@ Designed for long-form lecture videos (e.g., 1+ hour courses). Directly download
 | 🚀 PDF Slides Notes from this Project (Multimodal alignment, leading to precise answers) |
 | :---: |
 | ![NotebookLM Multimodal Precise Answer](https://github.com/user-attachments/assets/a2b1d739-5ccc-4100-acb3-a7a0c1c5c230) |
-### 2. Processing YouTube Auto-Generated Subtitles (YT Auto-generated Subtitles)
-For videos without pre-uploaded manual subtitles, this flow seamlessly downloads and processes auto-translated/auto-generated subtitles provided by the YouTube platform to synthesize structural slide-notes on the fly.
-*   **Best Suited For**: Time-sensitive daily news, financial/market analysis commentaries, talk shows with supporting slides/infographics, where no official subtitles are uploaded.
-*   **Video Source**: <!-- [Insert YouTube video link or title here] -->
-*   **Generated PDF**: <!-- [Insert link to generated PDF notes here] -->
-*   **Visual Comparison**:
-    | Original Video Frame | Structured Slide & Synced Subtitles |
-    | :---: | :---: |
-    | ![Original Video Frame](<!-- [Insert original frame screenshot path here] -->) | ![Generated PDF Page](<!-- [Insert generated PDF preview image path here] -->) |
 
-### 3. Local AI Speech-to-Text Transcription (Local AI Transcription)
-For local video uploads or YouTube videos completely lacking online subtitles. Uses the local `faster-whisper` CTranslate2 inference engine. When Mandarin audio is detected, it **automatically injects a Traditional Chinese guiding prompt** to output offline Traditional Chinese SRT subtitles.
-*   **Best Suited For**: Locally recorded classes/meetings (MP4), lecture recordings without any online subtitles, personal programming tutorials (e.g., self-made coding tutorials on YouTube), or field recordings.
-*   **Video Source**: <!-- [Insert YouTube video link or title here] -->
-*   **Generated PDF**: <!-- [Insert link to generated PDF notes here] -->
+### 2. Listing All Available YouTube Subtitles (including auto-generated)
+*   **Showcase**:
+    | CLI Output |
+    | :---: |
+    | ![CLI Output](https://github.com/user-attachments/assets/87edf33e-783f-4673-aab6-f08b9bff3e93) |
+
+### 3. Talking Head Commentary (News/Finance), Auto-generated Subtitles & Face Detection Enabled
+For videos without pre-uploaded manual subtitles, this flow downloads and processes auto-generated subtitles provided by the YouTube platform.
+*   **Best Suited For**: Financial/market analysis commentaries, talk shows with supporting slides/graphics, major developer conferences (e.g., Google I/O, WWDC) where the creator has not uploaded manual subtitles.
+*   **Video Source**: [2026 AI Bubble or AI Golden Era? [Morning Financial Summary]](https://www.youtube.com/watch?v=HlGuKabtxg8)
+*   **Generated PDF**: [v0.1.1_assets_2.pdf](https://github.com/RexTSLO/video-slide-notes/releases/download/v0.1.1/v0.1.1_assets_2.pdf) (Generated PDF page count reduced by ~20%)
 *   **Visual Comparison**:
     | Original Video Frame | Structured Slide & Synced Subtitles |
     | :---: | :---: |
-    | ![Original Video Frame](<!-- [Insert original frame screenshot path here] -->) | ![Generated PDF Page](<!-- [Insert generated PDF preview image path here] -->) |
+    | ![Original Video Frame](https://github.com/user-attachments/assets/a4453c8d-b3e3-42ce-a322-cc38df530b84) | ![Generated PDF Page](https://github.com/user-attachments/assets/db1880f4-89bf-4c83-a032-2c0b0de0f981) |
+
+### 4. Local AI Speech-to-Text Transcription (Local AI Transcription)
+For local video uploads or YouTube videos completely lacking online subtitles. Uses the local `faster-whisper` CTranslate2 inference engine to generate offline SRT subtitles and compile them into structured PDF notes.
+*   **Best Suited For**: Locally recorded classes/meetings (MP4), lecture recordings without any online subtitles, personal programming tutorials (e.g., self-made coding tutorials on YouTube), or field recordings.
+*   **Video Source**: [Mastering Claude Code in 30 minutes](https://www.youtube.com/watch?v=6eBSHbLKuN0)
+*   **Generated PDF**: [v0.1.1_assets_3.pdf](https://github.com/RexTSLO/video-slide-notes/releases/download/v0.1.1/v0.1.1_assets_3.pdf)
+*   **Visual Comparison**:
+    | Original Video Frame | Structured Slide & Synced Subtitles |
+    | :---: | :---: |
+    | ![Original Video Frame](https://github.com/user-attachments/assets/d308d0d8-3394-4def-ac2a-0ac2283f5c67) | ![Generated PDF Page](https://github.com/user-attachments/assets/2b64c3ae-43cc-4d20-9b3f-e45d4b49d5f3) |
 ---
 
 ## 🛠️ System Prerequisites
@@ -210,7 +221,7 @@ video-slide-notes/
 
 ## 🧪 Unit & Integration Testing
 
-The codebase includes high-fidelity unit and integration tests (total of 25 test cases). Tests run completely offline without downloading model parameters or video binaries:
+The codebase includes high-fidelity unit and integration tests (total of 53 test cases). Tests run completely offline without downloading model parameters or video binaries:
 
 ```bash
 PYTHONPATH=. ./venv/bin/pytest -v
@@ -218,7 +229,7 @@ PYTHONPATH=. ./venv/bin/pytest -v
 
 **Expected Output**:
 ```text
-============================== 25 passed in 1.94s ==============================
+============================== 53 passed in 2.40s ==============================
 ```
 
 ---

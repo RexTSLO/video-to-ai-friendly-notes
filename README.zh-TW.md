@@ -8,13 +8,16 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Tests Passed](https://img.shields.io/badge/tests-25%20passed-success.svg)](#單元與整合測試)
 
-`video-slide-notes` 是一個 AI-friendly、模組化、輕量且高效的 Python 工具。只需輸入一個 YouTube 連結或本地影片，它就能自動**下載影片、擷取投影片畫面、將語音轉為逐字稿，並將圖文對齊編排**。最終為您生成一份**適合人類閱讀與 AI/RAG（如 Google NotebookLM）解析的結構化 PDF 講義筆記**。
+`video-slide-notes` 是一個 AI-friendly、模組化、輕量且高效的 Python 工具。針對影像內容具有豐富資訊價值的影片，例如課程、教學、研討會等，只需輸入一個 YouTube 連結或本地影片，它就能自動**下載影片、擷取投影片畫面、將語音轉為逐字稿，並將圖文對齊編排**。最終為您生成一份**適合人類閱讀與 AI/RAG（如 Google NotebookLM）解析的結構化 PDF 講義筆記**。
 
 ---
 
 ## 🚀 核心特色
 
-1. **投影片畫面自動擷取 (Slide Detector)**：自動偵測並擷取投影片切換的關鍵影格，過濾切換過程中的模糊動畫與黑白屏。特別支援**動畫整合模式** (`--slide-mode`)，能將逐步疊加（Build-up）的投影片動畫合併為最終完成版，既保留完整簡報內容，又不會產生多餘的重複頁面。
+1. **投影片畫面自動擷取 (Slide Detector)**：
+   * **精準畫面擷取**：自動偵測並擷取投影片切換的關鍵影格，過濾切換過程中的模糊動畫與黑白屏。特別支援**動畫整合模式** (`--slide-mode`)，能將逐步疊加（Build-up）的投影片動畫合併為最終完成版，既保留完整簡報內容，又不會產生多餘的重複頁面。
+   * **去人像雜訊**：自動辨識並過濾重複的主講人純人像影格，將多餘的個人形象干擾降到最低。
+   * **彈性適應影片長度**：針對 YouTube 一般時數影片（約15 分鐘）及長時數影片（1 小時以上）均能穩定處理，產出對應長度的講義筆記。
 2. **語音轉字幕 (Whisper Transcriber)**：直接整合 `faster-whisper` CTranslate2 推理引擎，不依賴額外的 CLI 包裝。
 3. **對齊的圖文講義排版 (AI & Human Friendly Layout)**：
    * **繁體中文支援**：首次執行時會自動下載並註冊中文字型，徹底防止中文字元在 PDF 中變成空白方塊（豆腐字）。
@@ -31,9 +34,10 @@
 
 以下展示了三種不同字幕處理路徑下的實際影片與產出講義對比，協助您了解 `video-slide-notes` 在不同情境下的使用方法：
 
-### 1. 載入手動建立的 YouTube 官方字幕 (YT Manual Subtitles)
-針對長時間影片（例如 1 小時以上的演講或課程），直接使用 `--subs-from-yt zh-TW` 下載手動校對的官方繁體中文字幕。**跳過本地 AI 轉譯時間**，生成具備高結構化排版與時間軸對齊的 PDF 筆記。
-*   **適合影片類型**：有官方精心翻譯/校對字幕的長時間學術演講、大型開發者大會（如 Google I/O、WWDC）、Coursera 或 edX 等線上課程影片。
+### 1. 課程類影片，無人像，載入手動建立的 YouTube 官方字幕 (YT Manual Subtitles)
+針對 Youtube有提供官方手動建立字幕的影片，直接使用 `--subs-from-yt zh-TW` 下載字幕。**跳過本地 AI 轉譯時間**，生成具備高結構化排版與時間軸對齊的 PDF 筆記。
+預設使用 `--slide-mode=final` 模式，自動抓取連續播放的同一張投影片動畫，並合併為一張投影片，減少過渡頁面。
+*   **適合影片類型**：有官方精心翻譯/校對字幕的長時間學術演講、專題式深度教學影片、Coursera 或 edX 等線上課程影片。
 *   **示範影片**：[Harness Engineering：有時候語言模型不是不夠聰明，只是沒有人類好好引導](https://www.youtube.com/watch?v=R6fZR_9kmIw)
 *   **產出 PDF**：[v0.1.0_assets_1.pdf](https://github.com/RexTSLO/video-slide-notes/releases/download/v0.1.0/v0.1.0_assets_1.pdf)
 *   **效果展示**：
@@ -50,25 +54,31 @@
 | :---: |
 | ![NotebookLM 多模態精確回答](https://github.com/user-attachments/assets/e66cf93f-abee-453a-8fd3-5dbd5fbaafc8) |
 
-### 2. 載入 YouTube 自動生成的字幕 (YT Auto-generated Subtitles)
-針對沒有提供手動校對字幕、僅有 YouTube 系統語音識別自動生成字幕的影片。本工具可直接無縫下載並解析其自動生成字幕（支援自動翻譯/自動轉譯語系），產出講義。
-*   **適合影片類型**：時效性高的每日新聞、財經速讀解說影片、談話性節目（帶有輔助投影片或大字卡背景），且原作者未提供手動上傳字幕者。
-*   **示範影片**：<!-- [請在此填入 YouTube 影片連結或名稱] -->
-*   **產出 PDF**：<!-- [請在此填入 PDF 檔案下載連結] -->
+### 2. 條列出所有可用的 YouTube 字幕 (含自動生成字幕)
 *   **效果展示**：
-    | 原始影片畫面 | 產出之完成版投影片與字幕對齊 |
-    | :---: | :---: |
-    | ![原始影片截圖](<!-- [請在此填入原始影片截圖路徑] -->) | ![產出 PDF 頁面](<!-- [請在此填入 PDF 預覽圖片路徑] -->) |
+    | 命令執行畫面 |
+    | :---: |
+    | ![命令執行畫面](https://github.com/user-attachments/assets/87edf33e-783f-4673-aab6-f08b9bff3e93) |
 
-### 3. 本地 AI 語音轉文字生成字幕 (Local AI Transcription)
-針對完全沒有任何線上字幕的 YouTube 影片，或是本地上傳的課程影片檔。本專案將自動調用本地 `faster-whisper` CTranslate2 推理引擎，在偵測到中文語音時自動注入繁體中文引導 Prompt，離線生成繁體中文 SRT 並編排為結構化 PDF。
-*   **適合影片類型**：本地錄影課（MP4 檔）、學校課程錄影、線上未提供任何中文字幕的個人國外技術教學（如自製 Coding Tutorial）、或是實地演講錄音影片。
-*   **示範影片**：<!-- [請在此填入 YouTube 影片連結或名稱] -->
-*   **產出 PDF**：<!-- [請在此填入 PDF 檔案下載連結] -->
+### 3. 財經時事類影片，有人像，啟用人臉偵測，減少多餘的主講人畫面截圖
+針對沒有提供手動校對字幕、僅有 YouTube 系統語音識別自動生成字幕的影片。本工具可直接無縫下載並解析其自動生成字幕，產出講義。
+*   **適合影片類型**：財經速讀解說影片、談話性節目（帶有輔助投影片或大字卡背景）、大型開發者大會（如 Google I/O、WWDC），且原作者未提供手動上傳字幕者。
+*   **示範影片**：[2026 AI泡沫還是AI黃金年代?【早晨財經速解讀】](https://www.youtube.com/watch?v=HlGuKabtxg8)
+*   **產出 PDF**：[v0.1.1_assets_2.pdf](https://github.com/RexTSLO/video-slide-notes/releases/download/v0.1.1/v0.1.1_assets_2.pdf) (產出PDF長度減少約20%)
 *   **效果展示**：
     | 原始影片畫面 | 產出之完成版投影片與字幕對齊 |
     | :---: | :---: |
-    | ![原始影片截圖](<!-- [請在此填入原始影片截圖路徑] -->) | ![產出 PDF 頁面](<!-- [請在此填入 PDF 預覽圖片路徑] -->) |
+    | ![原始影片截圖](https://github.com/user-attachments/assets/a4453c8d-b3e3-42ce-a322-cc38df530b84) | ![產出 PDF 頁面](https://github.com/user-attachments/assets/db1880f4-89bf-4c83-a032-2c0b0de0f981) |
+
+### 4. 本地 AI 語音轉文字生成字幕 (Local AI Transcription)
+針對完全沒有任何線上字幕的 YouTube 影片，或是本地上傳的課程影片檔。本專案將自動調用本地 `faster-whisper` CTranslate2 推理引擎，離線生成 SRT 並編排為結構化 PDF。
+*   **適合影片類型**：本地錄影課（MP4 檔）、學校課程錄影、線上未提供任何中文字幕的個人國外技術教學（如自製 Coding Tutorial）、或是實地演講錄音影片。
+*   **示範影片**：[Mastering Claude Code in 30 minutes](https://www.youtube.com/watch?v=6eBSHbLKuN0)
+*   **產出 PDF**：[v0.1.1_assets_3.pdf](https://github.com/RexTSLO/video-slide-notes/releases/download/v0.1.1/v0.1.1_assets_3.pdf)
+*   **效果展示**：
+    | 原始影片畫面 | 產出之完成版投影片與字幕對齊 |
+    | :---: | :---: |
+    | ![原始影片截圖](https://github.com/user-attachments/assets/d308d0d8-3394-4def-ac2a-0ac2283f5c67) | ![產出 PDF 頁面](https://github.com/user-attachments/assets/2b64c3ae-43cc-4d20-9b3f-e45d4b49d5f3) |
 
 ---
 

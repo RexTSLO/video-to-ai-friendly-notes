@@ -38,7 +38,6 @@ For YouTube videos with pre-uploaded manual subtitles, directly downloads offici
 Defaults to `--slide-mode=final`, automatically capturing and merging incremental animations on the same slide into a single consolidated image, reducing transition pages.
 *   **Best Suited For**: Long-form academic lectures, topic-focused coding/educational videos, or online courses (Coursera, edX) that come with high-quality, pre-uploaded official subtitles.
 *   **Video Source**: [Harness Engineering: Sometimes language models are not unintelligent, they just lack proper human guidance](https://www.youtube.com/watch?v=R6fZR_9kmIw)
-*   **Generated PDF**: [v0.1.0_assets_1.pdf](https://github.com/RexTSLO/video-slide-notes/releases/download/v0.1.0/v0.1.0_assets_1.pdf)
 *   **Visual Comparison**:
     | Original Video Frame | Structured Slide & Synced Subtitles |
     | :---: | :---: |
@@ -63,7 +62,6 @@ Defaults to `--slide-mode=final`, automatically capturing and merging incrementa
 For videos without pre-uploaded manual subtitles, this flow downloads and processes auto-generated subtitles provided by the YouTube platform.
 *   **Best Suited For**: Financial/market analysis commentaries, talk shows with supporting slides/graphics, major developer conferences (e.g., Google I/O, WWDC) where the creator has not uploaded manual subtitles.
 *   **Video Source**: [2026 AI Bubble or AI Golden Era? [Morning Financial Summary]](https://www.youtube.com/watch?v=HlGuKabtxg8)
-*   **Generated PDF**: [v0.1.1_assets_2.pdf](https://github.com/RexTSLO/video-slide-notes/releases/download/v0.1.1/v0.1.1_assets_2.pdf) (Generated PDF page count reduced by ~20%)
 *   **Visual Comparison**:
     | Original Video Frame | Structured Slide & Synced Subtitles |
     | :---: | :---: |
@@ -73,7 +71,6 @@ For videos without pre-uploaded manual subtitles, this flow downloads and proces
 For local video uploads or YouTube videos completely lacking online subtitles. Uses the local `faster-whisper` CTranslate2 inference engine to generate offline SRT subtitles and compile them into structured PDF notes.
 *   **Best Suited For**: Locally recorded classes/meetings (MP4), lecture recordings without any online subtitles, personal programming tutorials (e.g., self-made coding tutorials on YouTube), or field recordings.
 *   **Video Source**: [Mastering Claude Code in 30 minutes](https://www.youtube.com/watch?v=6eBSHbLKuN0)
-*   **Generated PDF**: [v0.1.1_assets_3.pdf](https://github.com/RexTSLO/video-slide-notes/releases/download/v0.1.1/v0.1.1_assets_3.pdf)
 *   **Visual Comparison**:
     | Original Video Frame | Structured Slide & Synced Subtitles |
     | :---: | :---: |

@@ -39,7 +39,6 @@
 預設使用 `--slide-mode=final` 模式，自動抓取連續播放的同一張投影片動畫，並合併為一張投影片，減少過渡頁面。
 *   **適合影片類型**：有官方精心翻譯/校對字幕的長時間學術演講、專題式深度教學影片、Coursera 或 edX 等線上課程影片。
 *   **示範影片**：[Harness Engineering：有時候語言模型不是不夠聰明，只是沒有人類好好引導](https://www.youtube.com/watch?v=R6fZR_9kmIw)
-*   **產出 PDF**：[v0.1.0_assets_1.pdf](https://github.com/RexTSLO/video-slide-notes/releases/download/v0.1.0/v0.1.0_assets_1.pdf)
 *   **效果展示**：
     | 原始影片畫面 | 產出之完成版投影片與字幕對齊 |
     | :---: | :---: |
@@ -64,7 +63,6 @@
 針對沒有提供手動校對字幕、僅有 YouTube 系統語音識別自動生成字幕的影片。本工具可直接無縫下載並解析其自動生成字幕，產出講義。
 *   **適合影片類型**：財經速讀解說影片、談話性節目（帶有輔助投影片或大字卡背景）、大型開發者大會（如 Google I/O、WWDC），且原作者未提供手動上傳字幕者。
 *   **示範影片**：[2026 AI泡沫還是AI黃金年代?【早晨財經速解讀】](https://www.youtube.com/watch?v=HlGuKabtxg8)
-*   **產出 PDF**：[v0.1.1_assets_2.pdf](https://github.com/RexTSLO/video-slide-notes/releases/download/v0.1.1/v0.1.1_assets_2.pdf) (產出PDF長度減少約20%)
 *   **效果展示**：
     | 原始影片畫面 | 產出之完成版投影片與字幕對齊 |
     | :---: | :---: |
@@ -74,7 +72,6 @@
 針對完全沒有任何線上字幕的 YouTube 影片，或是本地上傳的課程影片檔。本專案將自動調用本地 `faster-whisper` CTranslate2 推理引擎，離線生成 SRT 並編排為結構化 PDF。
 *   **適合影片類型**：本地錄影課（MP4 檔）、學校課程錄影、線上未提供任何中文字幕的個人國外技術教學（如自製 Coding Tutorial）、或是實地演講錄音影片。
 *   **示範影片**：[Mastering Claude Code in 30 minutes](https://www.youtube.com/watch?v=6eBSHbLKuN0)
-*   **產出 PDF**：[v0.1.1_assets_3.pdf](https://github.com/RexTSLO/video-slide-notes/releases/download/v0.1.1/v0.1.1_assets_3.pdf)
 *   **效果展示**：
     | 原始影片畫面 | 產出之完成版投影片與字幕對齊 |
     | :---: | :---: |

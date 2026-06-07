@@ -12,6 +12,14 @@
 
 ---
 
+## ⚖️ 免責聲明 (Disclaimer)
+
+* **用途限制**：本專案僅供學術研究、個人學習與技術交流之用途。
+* **著作權遵守**：使用者在使用本工具下載、轉譯影片及生成講義時，應自行確認該行為符合當地法律，並尊重原作者的智慧財產權。請勿將生成的 PDF 講義用於商業行為、公開散佈或任何侵害他人著作權之活動。
+* **第三方條款**：本工具使用 `yt-dlp` 下載 YouTube 公開資源，使用者需自行承擔因違反 YouTube 服務條款（Terms of Service）而產生的任何帳號風險。本專案作者對此概不負責。
+
+---
+
 ## 🚀 核心特色
 
 1. **投影片畫面自動擷取 (Slide Detector)**：
@@ -145,19 +153,20 @@ python3 -m src.main -i "path/to/lecture.mp4" -o output_notes.pdf -m medium -l zh
 
 ### 🔑 YouTube 身分驗證 (解決 429 頻率限制)
 
-為防止下載時出現 `HTTP Error 429: Too Many Requests` 或是需要下載私人/會員影片，您可以使用 `--cookies` 參數傳入 Netscape 格式的 Cookie 檔案。
+為防止下載時出現 `HTTP Error 429: Too Many Requests` ，您可以使用 `--cookies` 參數傳入 Netscape 格式的 Cookie 檔案。
 
-#### 🛡️ 安全最佳實踐 (最小化 Cookie 導出)
-為了最大化您的帳號隱私，目前不支援 yt-dlp的 `--cookies-from-browser` 功能，而是建議**手動導出** Netscape 格式的 Cookie 檔案後再進行過濾，僅保留 YouTube 下載所需的最少 Cookie：
+> [!CAUTION]
+> **重要安全性警告：**
+> 使用個人常用帳號搭配 `yt-dlp` 下載影片，會有被 YouTube 暫時或永久封鎖帳號（封號）的風險。
+> **強烈建議使用一個全新的「免洗/丟棄式帳號 (Throwaway Account)」來登入 YouTube**，切勿使用個人的常用主帳號。
 
-1. 在瀏覽器中登入 YouTube。
-2. 使用瀏覽器擴充功能（如 [Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc?hl=en)）導出 **Netscape** 格式的 Cookie 檔案。
-3. 使用文字編輯器打開導出的檔案，刪除**除以下兩行之外**的所有 Cookie 紀錄：
-   * **`LOGIN_INFO`**：YouTube 專屬的登入狀態驗證。
-   * **`VISITOR_INFO1_LIVE`**：YouTube 用於識別訪客 Session 的臨時 ID（這項能有效防止被判定為爬蟲而觸發 429 限制）。
-4. 使用以下指令執行：
+#### 🛡️ 安全最佳實踐 (Cookie 導出與過濾)
+由於 YouTube 會頻繁旋轉（Rotate）瀏覽器分頁中的 Cookie，為使導出的 Cookie 保持有效，建議參考 [yt-dlp 官方 Wiki 導出指南](https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies)，使用「無痕模式」導出最小化 Cookie：
+
+* 可以使用瀏覽器擴充功能（如 [Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc?hl=en)）導出 **Netscape** 格式的 Cookie 檔案。
+* 使用以下指令執行：
    ```bash
-   python3 -m src.main -u "https://www.youtube.com/watch?v=xxx" --cookies downloads/your_youtube_cookies.txt
+   python3 -m src.main -u "https://www.youtube.com/watch?v=xxx" --cookies your_youtube_cookies.txt
    ```
 
 ---
@@ -235,11 +244,3 @@ PYTHONPATH=. ./venv/bin/pytest -v
 ## 📄 授權條款
 
 本專案採用 [MIT License](LICENSE) 授權條款開源發布。
-
----
-
-## ⚖️ 免責聲明 (Disclaimer)
-
-* **用途限制**：本專案僅供學術研究、個人學習與技術交流之用途。
-* **著作權遵守**：使用者在使用本工具下載、轉譯影片及生成講義時，應自行確認該行為符合當地法律，並尊重原作者的智慧財產權。請勿將生成的 PDF 講義用於商業行為、公開散佈或任何侵害他人著作權之活動。
-* **第三方條款**：本工具使用 `yt-dlp` 下載 YouTube 公開資源，使用者需自行承擔因違反 YouTube 服務條款（Terms of Service）而產生的任何帳號風險。本專案作者對此概不負責。

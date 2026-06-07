@@ -12,6 +12,14 @@
 
 ---
 
+## ⚖️ Disclaimer
+
+* **Purpose**: This project is intended solely for educational, academic research, and technical exchange purposes.
+* **Copyright Compliance**: When downloading/transcribing videos and compiling notes, users are solely responsible for ensuring compliance with local copyright laws. Generated PDF notes must not be used for commercial reproduction, public redistribution, or any other activities infringing upon the intellectual property of original content creators.
+* **Third-Party Terms**: This utility uses `yt-dlp` to retrieve public YouTube assets. Users assume all responsibility for any account restrictions resulting from violations of YouTube's Terms of Service. The project authors assume no liability for user activities.
+
+---
+
 ## 🚀 Core Features
 
 1. **Automated Slide Capture (Slide Detector)**:
@@ -144,19 +152,20 @@ python3 -m src.main -i "path/to/lecture.mp4" -o output_notes.pdf -m medium -l zh
 
 ### 🔑 YouTube Authentication (Bypassing 429 Rate Limits)
 
-To prevent `HTTP Error 429: Too Many Requests` or to download private/age-restricted videos, you can provide a Netscape cookies file using the `--cookies` parameter.
+To prevent `HTTP Error 429: Too Many Requests` , you can provide a Netscape cookies file using the `--cookies` parameter.
 
-#### 🛡️ Best Security Practice (Minimalist Export)
-For maximum privacy, the `--cookies-from-browser` feature of `yt-dlp` is currently not supported. Instead, it is highly recommended to **manually export** a Netscape format cookies file and filter it to keep only the essential cookies for YouTube:
+> [!CAUTION]
+> **Important Security Warning:**
+> Using your personal account with `yt-dlp` runs the risk of your account being temporarily or permanently banned.
+> **It is highly recommended to use a throwaway account** instead of your primary personal account.
 
-1. Log in to YouTube in your browser.
-2. Export your cookies in **Netscape** format using a browser extension (such as [Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc?hl=en)).
-3. Edit the exported text file and delete all lines **except** the following two essential cookies:
-   * **`LOGIN_INFO`**: Handles the YouTube-specific login authentication.
-   * **`VISITOR_INFO1_LIVE`**: Used by YouTube to recognize your visitor session (necessary to bypass anti-bot 429 rate limits).
-4. Run the tool with:
+#### 🛡️ Best Security Practice (Cookie Export and Filtering)
+Since YouTube frequently rotates session cookies on open browser tabs, to export cookies that will remain working with `yt-dlp`, you should follow the [yt-dlp official wiki exporting guide](https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies) using an incognito window:
+
+* You can export your cookies in **Netscape** format using a browser extension (such as [Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc?hl=en)).
+* Then, you can run the tool with:
    ```bash
-   python3 -m src.main -u "https://www.youtube.com/watch?v=xxx" --cookies downloads/your_youtube_cookies.txt
+   python3 -m src.main -u "https://www.youtube.com/watch?v=xxx" --cookies your_youtube_cookies.txt
    ```
 
 ---
@@ -234,11 +243,3 @@ PYTHONPATH=. ./venv/bin/pytest -v
 ## 📄 License
 
 Distributed under the MIT License. See [LICENSE](LICENSE) for details.
-
----
-
-## ⚖️ Disclaimer
-
-* **Purpose**: This project is intended solely for educational, academic research, and technical exchange purposes.
-* **Copyright Compliance**: When downloading/transcribing videos and compiling notes, users are solely responsible for ensuring compliance with local copyright laws. Generated PDF notes must not be used for commercial reproduction, public redistribution, or any other activities infringing upon the intellectual property of original content creators.
-* **Third-Party Terms**: This utility uses `yt-dlp` to retrieve public YouTube assets. Users assume all responsibility for any account restrictions resulting from violations of YouTube's Terms of Service. The project authors assume no liability for user activities.
